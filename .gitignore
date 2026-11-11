@@ -1,0 +1,14 @@
+# Private: never published — the full website page copies and anything that reads private files. Without them gen/
+# cannot rebuild piquesignal/desktop/plugin.js or run its tests: maintainer-only (see gen/README.md).
+*.html
+!piquesignal/**/*.html
+gen/*.css
+gen/engine_parts.js
+gen/tests/make_expected.py
+gen/_*
+# Python / local leftovers
+__pycache__/
+*.pyc
+*.pyo
+.venv*/
+node_modules/

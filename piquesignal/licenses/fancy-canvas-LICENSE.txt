@@ -1,0 +1,31 @@
+fancy-canvas 2.1.0 - MIT License
+
+fancy-canvas is a dependency of TradingView Lightweight Charts 5.3.0 and is bundled inside it in desktop/plugin.js.
+
+Source: the npm package fancy-canvas 2.1.0 (https://registry.npmjs.org/fancy-canvas/-/fancy-canvas-2.1.0.tgz,
+integrity sha512-nifxXJ95JNLFR2NgRV4/MxVP45G9909wJTEKz5fg/TZS20JJZA6hfgRVh/bC9bwl2zBtBNcYPjiBE4njQHVBwQ==). Its
+package.json declares "license": "MIT" and "author": "smakarov@tradingview.com". The npm package itself carries no
+LICENSE file, so the notice below is the copyright line of the upstream LICENSE file of the fancy-canvas repository
+(https://github.com/tradingview/fancy-canvas).
+
+MIT License
+
+Copyright (c) 2019 TradingView, Inc
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

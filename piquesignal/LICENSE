@@ -1,0 +1,39 @@
+PiqueSignal for Hermes — licence
+
+Copyright (c) 2026 PiqueSignal (piquesignal.xyz). All rights reserved.
+
+This repository (the "Plugin") and everything in it, including the PiqueSignal website board code, styles and pages
+it carries, belongs to PiqueSignal.
+
+Exception - fonts: piquesignal/desktop/plugin.js carries three open-source fonts (Hanken Grotesk, JetBrains Mono and
+Bricolage Grotesque), embedded so the board looks the same as the website. They are NOT covered by this licence. Each
+is licensed under the SIL Open Font License, Version 1.1; the full licence text with each font's copyright notice is in
+piquesignal/fonts/ (OFL_hankengrotesk.txt, OFL_jetbrainsmono.txt, OFL_bricolagegrotesque.txt). Those fonts may be
+used, studied, modified and redistributed under that licence.
+
+Exception - chart library: piquesignal/desktop/plugin.js carries TradingView Lightweight Charts(TM) 5.3.0 (Copyright (c)
+TradingView, Inc., https://www.tradingview.com/), unchanged except its final export statement, with its bundled
+dependency fancy-canvas 2.1.0; gen/vendor/lightweight-charts.standalone.production.mjs is the unchanged source copy of
+the same library file. They are NOT covered by this licence. Lightweight Charts is licensed under the Apache
+License, Version 2.0 (full text: piquesignal/licenses/lightweight-charts-LICENSE.txt); fancy-canvas is licensed under
+the MIT License (full text with its notice: piquesignal/licenses/fancy-canvas-LICENSE.txt). Both may be used, studied,
+modified and redistributed under their own licences.
+
+You may:
+  - download, install and use the Plugin unchanged, as a plugin for Hermes Agent / Hermes Desktop, for your own use;
+  - read the source to review what it does (for example, as part of a plugin catalog review).
+
+You may not, without written permission from PiqueSignal:
+  - copy, modify, adapt, translate or create works based on the Plugin or any part of it;
+  - reuse any part of it (including the board code, styles, layout or text) in another product, plugin, website or
+    service;
+  - redistribute, sell, sublicense or publish the Plugin or any part of it, except installing it from its official
+    source;
+  - use the PiqueSignal name or logo, except to refer to this Plugin.
+
+The PiqueSignal data shown by the Plugin comes from PiqueSignal's servers under PiqueSignal's own terms; this licence
+gives no rights to that data. Member features need your own PiqueSignal plan and key.
+
+THE PLUGIN IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING FITNESS FOR A PARTICULAR
+PURPOSE. IN NO EVENT SHALL PIQUESIGNAL BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THE
+PLUGIN. Nothing shown by the Plugin is financial advice; on-chain data, for research only.

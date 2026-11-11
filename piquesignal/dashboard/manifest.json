@@ -1,0 +1,13 @@
+{
+  "name": "piquesignal",
+  "label": "PiqueSignal",
+  "description": "Backend for the PiqueSignal Desktop panel: fetches the PiqueSignal board for the pane.",
+  "icon": "Puzzle",
+  "version": "1.4.0",
+  "tab": {
+    "path": "/piquesignal",
+    "hidden": true
+  },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}

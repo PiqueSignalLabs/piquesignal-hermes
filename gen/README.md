@@ -58,5 +58,5 @@ written by hand.
    `../piquesignal/licenses/lightweight-charts-LICENSE.txt` (Apache-2.0) and
    `../piquesignal/licenses/fancy-canvas-LICENSE.txt` (MIT).
 
-Pages used: the PiqueSignal website board pages after its 2026-11 release (`free_desktop.html`, `gated_desktop.html`,
+Pages used: the Pique Signal website board pages after its 2026-11 release (`free_desktop.html`, `gated_desktop.html`,
 `free_page.html`, `gated_page.html`). The full page copies are kept private, not in this repository.

@@ -1,8 +1,10 @@
 """The coin pop-up's price chart, the Python side (the CHART SOURCE CHECK + the FIXED CONTRACT): core.candles(mint, tf)
 and GET /chart. The pool is ONLY the pair the Deep Check live pair rule picked
-(never GeckoTerminal's own "top pool"); "unclear" = no chart and no GeckoTerminal request; the GeckoTerminal read is
-one fixed URL with the pool address only, a neutral User-Agent, no key, 512 KB, no redirects, a 60 s cache per
-(pool, tf), a quiet 429 / 503 back-off capped at 15 min; the answer is untrusted (strict shape, candle sanity filter).
+(never GeckoTerminal's own "top pool"); the chart shows good or bad (pairs that disagree, a forced or suspect pick, a
+dead pair that out-traded the pick, an inverted pool: all charted; Deep Check's live line still says unclear); the
+GeckoTerminal read is one fixed URL with the pool address and the coin's contract address (token=<mint>, the coin's own
+side), a neutral User-Agent, no key, 512 KB, no redirects, a 60 s cache per (pool, tf, coin), a quiet 429 / 503
+back-off capped at 15 min; the answer is untrusted (strict shape, candle sanity filter).
 Uses the fakes of test_extras.py / test_deep_check.py. No real network: Dexscreener and GeckoTerminal reads go to fake
 transports."""
 import json
@@ -120,10 +122,10 @@ class ChartContractTests(ChartBase):
             self.assertEqual(core.candles(MINT, tf)["state"], "ok", tf)
             url = self.cg.calls[-1][0]
             self.assertEqual(url, "https://api.geckoterminal.com/api/v2/networks/solana/pools/" + POOL + "/ohlcv/"
-                             + tail + "&currency=usd")
+                             + tail + "&currency=usd&token=" + MINT)
         self.assertEqual(len(self.live.calls), 1)                              # one Dexscreener read (its 60 s cache)
 
-    def test_request_carries_the_pool_only_no_key_no_brand(self):
+    def test_request_carries_the_pool_and_the_coin_only_no_key_no_brand(self):
         self.member()                                                          # a member key is set: it never leaves
         core.candles(MINT, "1h")
         self.assertEqual(len(self.cg.calls), 1)
@@ -134,8 +136,11 @@ class ChartContractTests(ChartBase):
         self.assertNotIn(KEY.lower(), blob)
         self.assertNotRegex(blob, r"piquesignal|hermes|pique|bearer|x-cg|api[-_]?key")
         self.assertNotIn(KEY, url)
-        self.assertNotIn(MINT, url)                                      # GeckoTerminal gets the pool, never the coin
-        self.assertNotRegex(url.lower(), r"key|token|piquesignal")
+        # GeckoTerminal gets the pool + the coin's contract address (token=, its own side) and nothing else
+        self.assertEqual(url, "https://api.geckoterminal.com/api/v2/networks/solana/pools/" + POOL
+                         + "/ohlcv/hour?aggregate=1&limit=168&currency=usd&token=" + MINT)
+        self.assertEqual(url.count(MINT), 1)
+        self.assertNotRegex(url.lower(), r"key|piquesignal|hermes")
         self.assertTrue(url.startswith("https://api.geckoterminal.com/"))
         self.assertEqual(cap, 512 * 1024)
         self.assertLessEqual(timeout, 15)
@@ -163,25 +168,143 @@ class ChartContractTests(ChartBase):
 
 # ----------------------------------------------------------------------------------------------- the pool choice
 class ChartPoolTests(ChartBase):
-    def test_dinga_is_unclear_and_geckoterminal_is_never_asked(self):
+    def test_dinga_shows_its_chart(self):
+        # the pairs disagree (Deep Check: "Live price unclear"), but the chart always shows the picked pair's pool
         for i, pairs in enumerate((td.dinga(), td.pairless(), td.dinga(fake_h1=5000))):
             for p in pairs:
-                p["pairAddress"] = POOL if i % 2 else POOL2                    # valid pools: still never asked
+                p["pairAddress"] = POOL if i % 2 else POOL2
             self.live.reply = (200, {}, td.body(pairs))
             self.fresh()
             a = core.candles(MINT, "5m")
-            self.assertEqual((a["state"], a["pool"], a["candles"]), ("unclear", None, []), i)
+            want = POOL if i % 2 else POOL2
+            self.assertEqual((a["state"], a["pool"], len(a["candles"])), ("ok", want, 5), i)
             self.assertEqual(a["dex"], "pumpswap")
-        self.assertEqual(self.cg.calls, [])
+            self.assertTrue(self.cg.calls[-1][0].endswith("&token=" + MINT), i)
+            self.assertIs(core.live_pairs(MINT)["unclear"], True, i)
+        self.assertEqual(len(self.cg.calls), 3)
 
-    def test_picked_pair_under_1000_or_5x_apart_is_unclear(self):
-        for pairs in ([good_pair(volume={"h1": 999, "h24": 50000})],
-                      [good_pair(volume={"h1": 5000, "h24": 90000}),
-                       good_pair(pool=POOL2, priceUsd="0.0007", volume={"h1": 0, "h24": 90000})]):
+    def test_a_quiet_coin_shows_its_chart(self):
+        # a quiet coin: low, zero or no 1 h volume on one healthy pair = the chart shows; Deep Check's live line still
+        # says the price is unclear (no ratio), exactly as before. Also the realistic all-day-quiet coin: one pair with
+        # far more liquidity than trading ($30k, $300 over 24 h, $0 in the last hour) is "suspect", but with no other
+        # live pair to prefer it keeps its flat chart.
+        for liq, vol in ((41000, {"h1": 999, "h24": 50000}), (41000, {"h1": 0, "h24": 50000}),
+                         (41000, {"m5": 5, "h24": 50000}), (5000, {"m5": 0, "h1": 0, "h24": 2000}),
+                         (30000, {"m5": 0, "h1": 0, "h24": 300})):
+            self.live.reply = (200, {}, td.body([good_pair(liq=liq, volume=vol)]))
+            self.fresh()
+            a = core.candles(MINT, "1h")
+            self.assertEqual((a["state"], a["pool"], len(a["candles"])), ("ok", POOL, 5), vol)
+            live = core.live_pairs(MINT)
+            self.assertEqual((live["unclear"], live["disagree"]), (True, False), vol)
+        self.assertEqual(len(self.cg.calls), 5)
+        r = self.start()
+        self.part(r["run"], "live")
+        self.assertEqual(self.events("deepcheck.part")[-1]["line"], core.DC_LIVE_UNCLEAR)
+
+    def test_pairs_more_than_5x_apart_still_chart(self):
+        pairs = [good_pair(volume={"h1": 5000, "h24": 90000}),
+                 good_pair(pool=POOL2, priceUsd="0.0007", volume={"h1": 0, "h24": 90000})]
+        self.live.reply = (200, {}, td.body(pairs))
+        a = core.candles(MINT, "1h")
+        self.assertEqual((a["state"], a["pool"], len(a["candles"])), ("ok", POOL, 5))
+        self.assertEqual((core.live_pairs(MINT)["disagree"], core.live_pairs(MINT)["unclear"]), (True, True))
+        self.assertEqual(len(self.cg.calls), 1)
+
+    def test_a_forced_or_suspect_pick_still_charts(self):
+        # forced: only suspect live pairs + a non-suspect dead one (the dead one is named and charted)
+        forced = [good_pair(pool=POOL2, dexId="pumpswap", liq=2e6, volume={"h1": 9000, "h24": 12000}),
+                  good_pair(pool=POOL, liq=50, volume={"h1": 0, "h24": 1000})]
+        # the picked pair itself suspect while another live pair exists (both suspect, one price: Deep Check's line
+        # is clear)
+        suspect = [good_pair(dexId="pumpswap", liq=2e6, volume={"h1": 9000, "h24": 12000}),
+                   good_pair(pool=POOL2, dexId="meteora", liq=1e6, volume={"h1": 2000, "h24": 3000})]
+        for pairs, unclear in ((forced, True), (suspect, False)):
             self.live.reply = (200, {}, td.body(pairs))
             self.fresh()
-            self.assertEqual(core.candles(MINT, "1h")["state"], "unclear")
-        self.assertEqual(self.cg.calls, [])
+            a = core.candles(MINT, "1h")
+            self.assertEqual((a["state"], a["pool"], len(a["candles"])), ("ok", POOL, 5))
+            live = core.live_pairs(MINT)
+            self.assertEqual((live["unclear"], live["disagree"]), (unclear, True))
+        self.assertEqual(len(self.cg.calls), 2)
+
+    def test_a_sole_suspect_pair_keeps_its_chart(self):
+        # one live pair, suspect (far more liquidity than trading), nothing else to prefer: the chart shows (a dead dust
+        # pool beside it with no trading, itself suspect, changes nothing; a non-suspect dead pair beside it is the
+        # unchanged "forced" case above); Deep Check's line is unchanged (its own rule)
+        sole = good_pair(dexId="pumpswap", liq=2e6, volume={"h1": 9000, "h24": 12000})
+        dust = good_pair(pool=POOL2, dexId="meteora", liq=0.4, volume={"h1": 0, "h24": 0})
+        for pairs in ([sole], [sole, dust]):
+            self.live.reply = (200, {}, td.body(pairs))
+            self.fresh()
+            a = core.candles(MINT, "1h")
+            self.assertEqual((a["state"], a["pool"], a["dex"]), ("ok", POOL, "pumpswap"), len(pairs))
+            live = core.live_pairs(MINT)
+            self.assertEqual((live["unclear"], live["disagree"]), (False, False), len(pairs))
+        self.assertEqual(len(self.cg.calls), 2)
+        # every pair dead: a sole suspect dust pool (liquidity, no trading) is the pick itself; it still gets its chart
+        # (alone or next to another suspect dead pool; Deep Check's line says unclear)
+        lone = good_pair(dexId="meteora", liq=50, volume={"m5": 0, "h1": 0, "h24": 0})
+        for pairs in ([lone], [lone, dust]):
+            self.live.reply = (200, {}, td.body(pairs))
+            self.fresh()
+            a = core.candles(MINT, "1h")
+            self.assertEqual((a["state"], a["pool"], len(a["candles"]), a["dex"]), ("ok", POOL, 5, "meteora"), len(pairs))
+            live = core.live_pairs(MINT)
+            self.assertEqual((live["unclear"], live["disagree"]), (True, True), len(pairs))
+        self.assertEqual(len(self.cg.calls), 4)
+
+    def test_a_dead_pair_that_out_traded_the_pick_still_charts(self):
+        # a curve with no liquidity reported and no 5 min trade (dead) that still traded more over the last hour than a
+        # thin planted live pool (one price, so the 5x check alone would pass): the pick never took it over = the pairs
+        # disagree (Deep Check's line says unclear), and the picked pool's chart still shows
+        curve = good_pair(pool=POOL2, dexId="pumpfun", liq=None, volume={"m5": 0, "h1": 7110, "h24": 7110})
+        planted = good_pair(dexId="meteora", liq=300, volume={"m5": 40, "h1": 2000, "h24": 2500})
+        self.live.reply = (200, {}, td.body([curve, planted]))
+        a = core.candles(MINT, "1h")
+        self.assertEqual((a["state"], a["pool"], len(a["candles"]), a["dex"]), ("ok", POOL, 5, "meteora"))
+        live = core.live_pairs(MINT)
+        self.assertEqual((live["dex"], live["unclear"], live["disagree"]), ("meteora", True, True))
+        self.assertEqual(len(self.cg.calls), 1)
+        # the 11-11 real shapes stay clear (the live pair out-traded the curve and the dust pool)
+        for pairs in ([good_pair(dexId="pumpswap", liq=1523, priceUsd="0.000001511", volume={"h1": 51099, "h24": 51099}),
+                       good_pair(pool=POOL2, dexId="pumpfun", liq=None, priceUsd="0.00003437",
+                                 volume={"m5": 0, "h1": 7110, "h24": 7110}),
+                       good_pair(pool=POOL2, dexId="meteora", liq=0.4, priceUsd="0.00000972",
+                                 volume={"h1": 0.64, "h24": 0.64})],
+                      [good_pair(dexId="pumpswap", liq=10251, priceUsd="0.00002129",
+                                 volume={"h1": 575541, "h24": 575541}),
+                       good_pair(pool=POOL2, dexId="pumpfun", liq=None, priceUsd="0.00003434",
+                                 volume={"m5": 0, "h1": 17977, "h24": 85231})]):
+            out = core._live_parse(td.body(pairs), MINT)
+            self.assertEqual((out["dex"], out["unclear"], out["disagree"], out["pool"]), ("pumpswap", False, False, POOL))
+
+    def test_out_traded_counts_only_for_a_pick_under_1000(self):
+        # a normal pump.fun graduation: the frozen curve (no liquidity reported, no 5 min trade) still out-trades the new
+        # $25k pool over the last hour at the same price: clear, with its chart
+        curve = good_pair(pool=POOL2, dexId="pumpfun", liq=None, volume={"m5": 0, "h1": 40000, "h24": 120000})
+        fresh = good_pair(dexId="pumpswap", liq=25000, volume={"m5": 500, "h1": 8000, "h24": 8000})
+        # a healthy quiet $41k pool next to a dust pool with a few cents of 1 h trading: the chart shows
+        quiet = good_pair(liq=41000, volume={"h1": 0, "h24": 50000})
+        dust = good_pair(pool=POOL2, dexId="meteora", liq=0.4, volume={"h1": 0.64, "h24": 0.64})
+        for pairs, unclear, dex in (([curve, fresh], False, "pumpswap"), ([quiet, dust], True, "raydium")):
+            self.live.reply = (200, {}, td.body(pairs))
+            self.fresh()
+            a = core.candles(MINT, "1h")
+            self.assertEqual((a["state"], a["pool"], a["dex"], len(a["candles"])), ("ok", POOL, dex, 5), dex)
+            live = core.live_pairs(MINT)
+            self.assertEqual((live["unclear"], live["disagree"]), (unclear, False), dex)
+        self.assertEqual(len(self.cg.calls), 2)
+        # a planted pool holding >= $1,000 more than 5x off the curve's price: the pick never took the curve over (the
+        # curve out-traded it over 1 h), so the curve's price is still compared = the pairs disagree (the 5x check),
+        # whether the curve is frozen or still trading (Deep Check's line); the read itself asks GeckoTerminal nothing
+        for m5 in (0, 300):
+            active = good_pair(pool=POOL2, dexId="pumpfun", liq=None, volume={"m5": m5, "h1": 7110, "h24": 7110})
+            planted = good_pair(dexId="meteora", liq=1500, priceUsd="0.0012340",
+                                volume={"m5": 40, "h1": 2000, "h24": 2500})
+            out = core._live_parse(td.body([active, planted]), MINT)
+            self.assertEqual((out["unclear"], out["disagree"]), (True, True), m5)
+        self.assertEqual(len(self.cg.calls), 2)
 
     def test_only_the_pool_the_rule_picked(self):
         fake = good_pair(pool=POOL2, dexId="pumpswap", liq=2e6, volume={"h1": 9000, "h24": 12000})   # suspect
@@ -197,26 +320,31 @@ class ChartPoolTests(ChartBase):
         self.fresh()
         self.assertEqual(core.candles(MINT, "5m")["pool"], POOL2)
 
-    def test_candles_far_from_the_live_price_are_unclear(self):
-        # GeckoTerminal charts the pool's own base token (no token= is sent): a pool it lists the other way round (wSOL
-        # first) would chart SOL or an inverted price. The last close must be within 5x of the live pair price
-        # (td.pair: 0.0001234), else "unclear" with no candles (no chart when the price is unclear).
+    def test_an_inverted_pool_is_charted_as_the_coin(self):
+        # a pool GeckoTerminal lists the other way round (wSOL first) is asked with token=<mint>, so its answer is the
+        # coin's own side: the chart always shows (no 5x close check any more), whatever the closes are
         sol = [[T0 + i * 300, 150.0, 151.0, 149.0, 150.5, 10.0] for i in range(3)]
         inverted = [[T0 + i * 300, 8100.0, 8200.0, 8000.0, 8104.0, 10.0] for i in range(3)]
         for rows in (sol, inverted, [[T0, 0.00002, 0.00002, 0.00002, 0.00002, 1.0]],
-                     [[T0, 1.0, 1.0, 1.0, 1.0, 1.0], [T0 + 300, 0.0007, 0.0007, 0.0007, 0.0007, 1.0]]):
+                     [[T0, 1.0, 1.0, 1.0, 1.0, 1.0], [T0 + 300, 0.0007, 0.0007, 0.0007, 0.0007, 1.0]],
+                     [[T0, 0.0005, 0.0006, 0.0005, 0.0006, 1.0]], []):
             self.cg.reply = (200, {}, ohlcv(rows))
             self.fresh()
             a = core.candles(MINT, "5m")
             self.assertEqual(set(a), ANSWER_KEYS)
-            self.assertEqual((a["state"], a["pool"], a["candles"], a["dex"]), ("unclear", None, [], "raydium"), rows)
-        # within 5x either way (the last close counts) and an empty answer (no trades yet) stay "ok"
-        for rows in ([[T0, 0.0005, 0.0006, 0.0005, 0.0006, 1.0]], [[T0, 0.000025, 0.000025, 0.000025, 0.000025, 1.0]],
-                     [[T0, 9.0, 9.0, 9.0, 9.0, 1.0], [T0 + 300, 0.0001, 0.0001, 0.0001, 0.0001, 1.0]], []):
-            self.cg.reply = (200, {}, ohlcv(rows))
-            self.fresh()
-            a = core.candles(MINT, "5m")
-            self.assertEqual((a["state"], a["pool"], len(a["candles"])), ("ok", POOL, len(rows)), rows)
+            self.assertEqual((a["state"], a["pool"], len(a["candles"]), a["dex"]), ("ok", POOL, len(rows), "raydium"),
+                             rows)
+            self.assertTrue(self.cg.calls[-1][0].endswith("&currency=usd&token=" + MINT))
+
+    def test_the_cache_is_keyed_by_the_coin_too(self):
+        # the same pool + time frame for another coin is its own request (a token change never serves the other side)
+        self.assertEqual(core.candles(MINT, "5m")["state"], "ok")
+        self.live.reply = (200, {}, td.body([good_pair(base=MINT3)]))
+        self.assertEqual(core.candles(MINT3, "5m")["state"], "ok")
+        self.assertEqual([c[0].rsplit("&token=", 1)[1] for c in self.cg.calls], [MINT, MINT3])
+        with core._chart_lock:
+            self.assertIn((POOL, "5m", MINT), core._chart_cache)
+            self.assertIn((POOL, "5m", MINT3), core._chart_cache)
 
     def test_bad_pool_string_makes_no_request(self):
         for bad in ("PAIRxyz", "../../etc", POOL + "/x", POOL + "?a=1", "0" * 44, "O" * 44, POOL + "\n", " " + POOL,
@@ -285,7 +413,7 @@ class ChartReadTests(ChartBase):
         self.assertEqual(core.candles(MINT, "24h")["state"], "unavailable")
         self.assertEqual(len(self.cg.calls), 3)
         with core._chart_lock:                                                 # after the minute: asked again
-            k = (POOL, "5m")
+            k = (POOL, "5m", MINT)
             core._chart_cache[k] = (time.monotonic() - 61,) + core._chart_cache[k][1:]
         with core._live_lock:
             core._live_cache.clear()
@@ -402,7 +530,7 @@ class ChartReadTests(ChartBase):
             core._CHART_SLOTS.release()
             core._CHART_SLOTS.release()
         with core._chart_lock:
-            self.assertNotIn((POOL, "5m"), core._chart_cache)                  # not cached: the next click asks
+            self.assertNotIn((POOL, "5m", MINT), core._chart_cache)                  # not cached: the next click asks
         self.assertEqual(core.candles(MINT, "5m")["state"], "ok")
 
     def test_short_socket_timeout(self):
@@ -495,7 +623,8 @@ class ChartRouteTests(ChartBase):
 
 # ----------------------------------------------------------------------------------------------- the disclosure
 class ChartDisclosureTest(unittest.TestCase):
-    """The chart's new host, what it sends (the pool address only, on the user's click), the GeckoTerminal and
+    """The chart's new host, what it sends (the pool address and the coin's contract address, on the user's click; the
+    chart shows whenever the coin has a pool on Dexscreener), the GeckoTerminal and
     TradingView attribution and the GeckoTerminal data line are in plugin.yaml, README.md and guide.md."""
 
     def test_disclosed_in_all_three(self):
@@ -510,6 +639,13 @@ class ChartDisclosureTest(unittest.TestCase):
                       "no key, no other data", "see which coin's chart was opened"):
                 self.assertIn(w.lower(), low, (name, w))
             self.assertRegex(low, r"only (on your click|when you open)", name)
+            # candles: the pool address AND the coin's contract address (token=); the chart is never hidden for
+            # disagreeing pairs any more
+            self.assertIn("pool address and the coin's contract address", low, name)
+            self.assertIn("the chart shows whenever dexscreener lists a sol or usdc pair for the coin", low, name)
+            self.assertNotIn("pool address only to api.geckoterminal.com", low, name)
+            self.assertNotIn("only that pair's pool address", low, name)
+            self.assertNotIn("only the pair's pool address is sent", low, name)
             # the old keyed host is gone: CoinGecko's on-chain API now needs a key (401 without one)
             self.assertNotIn("api.coingecko.com", low, name)
             self.assertNotIn("powered by coingecko", low, name)
@@ -543,7 +679,7 @@ class ChartDisclosureTest(unittest.TestCase):
         ids = re.search(r"(?m)^license: (.+)$", yaml).group(1).split(" AND ")
         self.assertEqual(ids, ["LicenseRef-PiqueSignal", "OFL-1.1", "Apache-2.0", "MIT"])
         own = (PLUGIN / "LICENSE").read_text(encoding="utf-8")
-        self.assertIn("PiqueSignal for Hermes", own)
+        self.assertIn("Pique Signal for Hermes", own)
         for f in ("OFL_hankengrotesk.txt", "OFL_jetbrainsmono.txt", "OFL_bricolagegrotesque.txt"):
             self.assertIn("SIL OPEN FONT LICENSE", (PLUGIN / "fonts" / f).read_text(encoding="utf-8").upper(), f)
         apache = (PLUGIN / "licenses" / "lightweight-charts-LICENSE.txt").read_text(encoding="utf-8")
@@ -577,8 +713,8 @@ class ChartDisclosureTest(unittest.TestCase):
         self.assertIn("licenses/lightweight-charts-LICENSE.txt", readme)
 
     def test_version_stays(self):
-        self.assertEqual(core.VERSION, "1.4.0")
-        self.assertRegex((PLUGIN / "plugin.yaml").read_text(encoding="utf-8"), r"(?m)^version: 1\.4\.0$")
+        self.assertEqual(core.VERSION, "1.5.0")
+        self.assertRegex((PLUGIN / "plugin.yaml").read_text(encoding="utf-8"), r"(?m)^version: 1\.5\.0$")
 
 
 # ----------------------------------------------------------------------------------------------- live trades (ticks)
@@ -721,25 +857,29 @@ class TradesPoolTests(TradesBase):
         self.assertGreaterEqual(a["next_in_s"], 10)
         self.assertEqual((self.live.calls, self.cg.calls, self.tr.calls), ([], [], []))
 
-    def test_unclear_chart_is_unclear_with_zero_requests(self):
+    def test_disagreeing_pairs_and_an_inverted_pool_get_live_trades_too(self):
+        # the pairs disagree (dinga: the pick's price is ~10x the trades' price; pairless): the chart shows, so its
+        # live trades show too (the picked pool only, never Dexscreener; within 100x of the pick's price)
         for pairs in (td.dinga(), td.pairless()):
             for p in pairs:
                 p["pairAddress"] = POOL
             self.live.reply = (200, {}, td.body(pairs))
             self.fresh()
-            self.assertEqual(core.candles(MINT, "5m")["state"], "unclear")
+            reset_trades()
+            self.assertEqual(core.candles(MINT, "5m")["state"], "ok")
             n = len(self.live.calls)
             a = core.trades(MINT, 0)
-            self.assertEqual((a["state"], a["pool"], a["trades"]), ("unclear", None, []))
-            self.assertGreaterEqual(a["next_in_s"], 10)
+            self.assertEqual((a["state"], a["pool"], len(a["trades"])), ("ok", POOL, 5))
             self.assertEqual(len(self.live.calls), n)
-        # candles far from the live price (a pool listed the other way round) = unclear too
+            self.assertEqual(self.tr.calls[-1][0], "https://api.geckoterminal.com/api/v2/networks/solana/pools/"
+                             + POOL + "/trades")
+        # a pool listed the other way round: the candles are the coin's own side (token=), the trades show
         self.live.reply = (200, {}, td.body([good_pair()]))
         self.fresh()
+        reset_trades()
         self.cg.reply = (200, {}, ohlcv([[T0, 150.0, 151.0, 149.0, 150.5, 9.0]]))
-        self.assertEqual(core.candles(MINT, "5m")["state"], "unclear")
-        self.assertEqual(core.trades(MINT, 0)["state"], "unclear")
-        self.assertEqual(self.tr.calls, [])
+        self.assertEqual(core.candles(MINT, "5m")["state"], "ok")
+        self.assertEqual((core.trades(MINT, 0)["state"], len(self.tr.calls)), ("ok", 3))
 
     def test_no_pair_is_none_with_zero_requests(self):
         self.live.reply = (200, {}, td.body([]))
@@ -761,13 +901,13 @@ class TradesPoolTests(TradesBase):
         self.open_chart()
         self.assertEqual(core.trades(MINT, 0)["pool"], POOL2)
         self.assertTrue(self.tr.calls[-1][0].endswith("/pools/" + POOL2 + "/trades"))
-        # ... and when it turns unclear, live trades stop asking
+        # ... and when it has no valid pool any more, live trades stop asking
         self.live.reply = (200, {}, td.body(td.dinga()))
         self.fresh()
         self.later(POOL2)
-        core.candles(MINT, "5m")
+        self.assertEqual(core.candles(MINT, "5m")["state"], "none")
         n = len(self.tr.calls)
-        self.assertEqual(core.trades(MINT, 0)["state"], "unclear")
+        self.assertEqual(core.trades(MINT, 0)["state"], "none")
         self.assertEqual(len(self.tr.calls), n)
 
     def test_the_pick_is_forgotten_after_an_hour_unused_and_bounded(self):

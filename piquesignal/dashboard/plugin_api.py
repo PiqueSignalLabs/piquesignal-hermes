@@ -1,4 +1,4 @@
-"""PiqueSignal backend for the Hermes Desktop panel.
+"""Pique Signal backend for the Hermes Desktop panel.
 
 Mounted at /api/plugins/piquesignal/ once the plugin is in plugins.enabled. The Desktop pane calls these routes with
 ctx.rest; it never talks to piquesignal.xyz itself, and it never sees the member key.
@@ -12,11 +12,12 @@ Routes:
     GET  /coin-icon?mint=<mint>  {"path": <local file or null>}: the coin's board picture saved for a Windows
                                  notification (core.coin_icon_path: fetched from cdn.dexscreener.com, no key; at most
                                  40 files in this plugin's data folder; emptied when the member key is removed/refused)
-    GET  /chart?mint=<mint>&tf=5m|1h|24h  {"ok", "mint", "tf", "state": "ok"|"unclear"|"none"|"unavailable", "pool",
+    GET  /chart?mint=<mint>&tf=5m|1h|24h  {"ok", "mint", "tf", "state": "ok"|"none"|"unavailable", "pool",
                                  "dex", "candles": [[t, o, h, l, c, v] ...], "checked", "source": "GeckoTerminal"}: a
                                  coin pop-up's price chart, only when the user opens or switches it (core.candles: the
                                  pair the Deep Check live pair rule picks on api.dexscreener.com, its candles from
-                                 api.geckoterminal.com with the pool address only; no chart when the price is unclear)
+                                 api.geckoterminal.com with the pool address and the coin's address, both public;
+                                 the chart shows whenever Dexscreener lists a SOL or USDC pair for the coin)
     GET  /chart/trades?mint=<mint>&since=<epoch s>  {"ok", "mint", "state": "ok"|"unclear"|"none"|"unavailable"|
                                  "paused"|"stale", "pool", "trades": [[t, price_usd, volume_usd, "b"|"s", id] ...],
                                  "next_in_s", "checked"}: the open chart's live trades (core.trades: only the pool
@@ -204,8 +205,10 @@ def panel(body: dict = Body(...)) -> dict:
 # client): provider Edge (Hermes' free default) with the edge_tts library present = TWO voices (host A = the user's own
 # Edge voice when it is a plain English Neural voice name, else Aria; host B = Guy, or Aria when A is a male voice), a
 # quicker radio pace (+15%, or the user's own Edge speed); any other provider = ONE voice through Hermes' own
-# text-to-speech tool at speed 1.15. Each synthesis runs on a worker thread that carries the request's context
-# (asyncio.to_thread copies it), so the profile scope Hermes set for this plugin route applies; the file goes to a
+# text-to-speech tool at speed 1.15 (the plugin setting board_talk_tts_via_sdk, default off: on = that tool through
+# Hermes' public ctx.dispatch_tool instead of a direct import; _sdk_dispatch). Each synthesis runs on a worker
+# thread that carries the request's context (asyncio.to_thread copies it), so the profile scope Hermes set for this
+# plugin route applies; the file goes to a
 # private temp folder that is always removed, only an MP3 inside that folder and at most LIVE_AUDIO_MAX_BYTES is read,
 # a hard timeout, never two syntheses at once (a synthesis that never returns frees its slot after LIVE_STALE_S, so
 # Board talk and the voice test do not stay "busy" for one hung call; while LIVE_STUCK_MAX such hung calls have not
@@ -213,7 +216,7 @@ def panel(body: dict = Body(...)) -> dict:
 # (a non-empty body is refused), one call per LIVE_MIN_GAP_S per process, at most LIVE_TEST_DAY_MAX a local day (a paid
 # voice uses the user's credits; the day's count is kept in this plugin's data folder, so a restart does not reset it).
 # Logs carry the short result code only.
-LIVE_TEST_LINE = "PiqueSignal Board talk test. If you can hear this, Hermes can host Board talk."
+LIVE_TEST_LINE = "Pique Signal Board talk test. If you can hear this, Hermes can host Board talk."
 LIVE_TTS_TIMEOUT_S = 12.0
 LIVE_AUDIO_MAX_BYTES = 2 * 1024 * 1024
 LIVE_MIN_GAP_S = 5.0
@@ -231,6 +234,7 @@ TALK_EDGE_A = "en-US-AriaNeural"           # Hermes' own Edge default voice
 TALK_EDGE_B = "en-US-GuyNeural"
 TALK_EDGE_RATE = "+15%"
 TALK_TOOL_SPEED = 1.15
+TALK_TTS_SETTING = "board_talk_tts_via_sdk"   # plugin.yaml config_schema (bool, default false)
 TALK_ONE_HOST = "Hermes"
 _EDGE_VOICE_RE = re.compile(r"en-[A-Z]{2}-[A-Za-z]{2,40}Neural")
 _EDGE_NAME_RE = re.compile(r"en-[A-Z]{2}-([A-Za-z]+?)(?:Multilingual)?Neural")
@@ -261,12 +265,12 @@ def _load_edge():
 
 
 def _spoken_for_tts(text: str) -> str:
-    """Hermes' own text cleanup for speech (the same as its tool uses), or the text as it is."""
-    try:
-        from tools.tts_text_normalize import prepare_spoken_text
-        return prepare_spoken_text(text, max_chars=None)
-    except Exception:
-        return text.strip()
+    """The words an Edge voice says: core.live_spoken (no "$" before a ticker, a masked name in words, plain ASCII only:
+    every stored line already went through it, so this is a no-op for them) with the spaces made single. The lines need
+    no more: money, times and multiples are already words (core.talk_slots); a stray "%" after a number, "&" or "~" is
+    said as a word, as Hermes' own speech cleanup says it. Hermes' own tool cleans its text itself."""
+    t = re.sub(r"(?<=\d)\s*%", " percent", core.live_spoken(text))
+    return " ".join(t.replace("&", " and ").replace("~", " about ").split())
 
 
 def _tts_config() -> dict:
@@ -422,17 +426,46 @@ def _edge_say(text: str, path: str, voice: str, rate: str):
     return "ok"
 
 
+def _sdk_dispatch():
+    """Hermes' public ctx.dispatch_tool when the plugin setting board_talk_tts_via_sdk is on (read like the other
+    plugin settings: ctx.get_config, never .env or config.yaml values; read at every line, so a change applies at the
+    next line), else None (the setting off or unreadable, or this Hermes gave no dispatch_tool / get_config: the old
+    path speaks). Both come from register() (__init__.py core.talk_tts_ctx), stored apart from the Deep Check's."""
+    store = getattr(core, "talk_tts_ctx", None)
+    if not isinstance(store, dict):
+        return None
+    get_config, dispatch = store.get("get_config"), store.get("dispatch")
+    if not (callable(get_config) and callable(dispatch)):
+        return None
+    try:
+        on = get_config(TALK_TTS_SETTING, False)
+    except Exception:
+        return None
+    return dispatch if on is True else None
+
+
 def _tool_say(text: str, path: str):
-    """One line through Hermes' own text-to-speech tool -> (code, the file it says it wrote or None)."""
-    try:
-        tts = _load_tts()
-    except Exception:
-        return "tts_unavailable", None
-    try:
-        raw = tts(text, output_path=path, speed=TALK_TOOL_SPEED)
-        res = json.loads(raw) if isinstance(raw, str) else raw
-    except Exception:
-        return "tts_failed", None
+    """One line through Hermes' own text-to-speech tool -> (code, the file it says it wrote or None). With the setting
+    board_talk_tts_via_sdk on: through Hermes' public tool dispatch (ctx.dispatch_tool('text_to_speech', ...), the same
+    tool and arguments); off, or no dispatch: the tool imported directly, as before. Either way the caller
+    (_live_synth) checks the file the same way (its temp folder, .mp3, size cap, MP3 bytes) under the same timeouts."""
+    dispatch = _sdk_dispatch()
+    if dispatch is not None:
+        try:
+            raw = dispatch("text_to_speech", {"text": text, "output_path": path, "speed": TALK_TOOL_SPEED})
+            res = json.loads(raw) if isinstance(raw, str) else raw
+        except Exception:
+            return "tts_failed", None
+    else:
+        try:
+            tts = _load_tts()
+        except Exception:
+            return "tts_unavailable", None
+        try:
+            raw = tts(text, output_path=path, speed=TALK_TOOL_SPEED)
+            res = json.loads(raw) if isinstance(raw, str) else raw
+        except Exception:
+            return "tts_failed", None
     if not isinstance(res, dict) or res.get("success") is not True or not isinstance(res.get("file_path"), str):
         return "tts_failed", None
     return "ok", res["file_path"]

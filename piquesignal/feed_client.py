@@ -1,4 +1,4 @@
-"""PiqueSignal Hermes panel: one polite HTTPS client for every feed the panel reads (free board, member board, member
+"""Pique Signal Hermes panel: one polite HTTPS client for every feed the panel reads (free board, member board, member
 Early Edge, member /me; and the NEW read-only addresses of the server contract, live in this release (core.py
 HERMES_LIVE = True): keyless /api/free-board/missed, /free-pick, /banners, /img/<key> (logo <= 64 KB, banner <= 2 MB,
 PNG / JPEG / WebP with matching magic) and /history, keyed /api/pull/featured-callers, /missed-reveal/<id> and

@@ -55,6 +55,24 @@ _pl = types.ModuleType("plugins")
 _pl.plugin_storage = _ps
 sys.modules["plugins"] = _pl
 sys.modules["plugins.plugin_storage"] = _ps
+# Hermes' public surfaces the member-view gate reads (core._policy_class, core._bot_chat): the same stand-ins as
+# test_deep_check.py (whichever file loads first installs them; one set for every test file in the same run), so this
+# file also passes when it runs on its own. No launch policy (the user's own chat) and SessionDB's Bot Chat title.
+if "gateway.session_policy" not in sys.modules:
+    _pol = types.ModuleType("gateway.session_policy")
+    _pol.active_policy = lambda: None
+    sys.modules.setdefault("gateway", types.ModuleType("gateway"))
+    sys.modules["gateway.session_policy"] = _pol
+if "hermes_state" not in sys.modules:
+    class _SessionDB:
+        CANONICAL_BOT_CHAT_TITLE = "Bot Chat"                 # hermes_state.SessionDB's own value
+
+        def __init__(self, *a, **k):
+            raise RuntimeError("no session database in tests")
+
+    _hs = types.ModuleType("hermes_state")
+    _hs.SessionDB = _SessionDB
+    sys.modules["hermes_state"] = _hs
 
 
 def _load(name, path):
@@ -810,7 +828,7 @@ class ToolTests(Base):
 
     def _check_guide_text(self, text):
         import re
-        self.assertIn("How PiqueSignal works", text)
+        self.assertIn("How Pique Signal works", text)
         for w in ("OWNER NOTES", "OPEN QUESTIONS", "DRAFT"):
             self.assertNotIn(w, text.upper() if w == "DRAFT" else text, w)
         self.assertIsNone(re.search(r"\b[0-9a-fA-F]{8,}\b", text), "md5-like hex fingerprint in the guide")
@@ -844,7 +862,7 @@ class ToolTests(Base):
         self.assertEqual(schema["parameters"], {"type": "object", "properties": {}})
         self.assertIn("answer only from it", schema["description"])
         self.assertIn("Never invent", schema["description"])
-        for w in ("ANY question about PiqueSignal", "x402", "passes", "prices", "plans", "alerts", "agents"):
+        for w in ("ANY question about Pique Signal", "x402", "passes", "prices", "plans", "alerts", "agents"):
             self.assertIn(w, schema["description"])
         shipped = (PLUGIN / "guide.md").read_text(encoding="utf-8")
         self._check_guide_text(shipped)
@@ -983,6 +1001,19 @@ class CronBriefDollarTests(Base):
             self.job["prompt"] = agent_half.BRIEF["prompt_template"].format(view=view)
             self.assertIsNotNone(self.fix(), view)
 
+    def test_an_older_one_word_brief_is_still_ours(self):
+        """The blueprint's prompt now writes "Pique Signal" (two words); a brief job made from the older blueprint keeps
+        "PiqueSignal" (one word) in its stored prompt and is still our brief. Any other spelling is not."""
+        self.assertIn("write a short Pique Signal morning brief", agent_half.BRIEF["prompt_template"])
+        for view in ("auto", "free", "gated"):
+            old = agent_half.BRIEF["prompt_template"].format(view=view).replace("Pique Signal", "PiqueSignal")
+            self.assertIn("write a short PiqueSignal morning brief", old)
+            self.job["prompt"] = old
+            self.assertIsNotNone(self.fix(), view)
+        for name in ("Pique  Signal", "pique signal", "PiqueSignalX", "Pique-Signal"):
+            self.job["prompt"] = agent_half.BRIEF["prompt_template"].format(view="auto").replace("Pique Signal", name)
+            self.assertIsNone(self.fix(), name)
+
     def test_messaging_targets_are_never_touched(self):
         for t in ([{"platform": "telegram", "chat_id": "1"}],
                   [{"platform": "local", "chat_id": "c1"}, {"platform": "discord", "chat_id": "2"}],
@@ -1116,7 +1147,7 @@ class LiveSpeakTest(unittest.TestCase):
         self.assertIsInstance(res["ms"], int)
         self.assertEqual(len(self.calls), 1)
         self.assertEqual(self.calls[0]["text"], api.LIVE_TEST_LINE)
-        self.assertEqual(self.calls[0]["text"], "PiqueSignal Board talk test. If you can hear this, Hermes can host "
+        self.assertEqual(self.calls[0]["text"], "Pique Signal Board talk test. If you can hear this, Hermes can host "
                                                 "Board talk.")
         self.assertEqual(self.calls[0]["kw"], {"speed": 1.15}, "one voice: Hermes' tool at a quicker pace")
         self.assertEqual(self.calls[0]["profile"], "work-profile", "the request's profile scope applies on the worker")
@@ -2366,6 +2397,7 @@ class TalkCoreTest(unittest.TestCase):
             coins, header), coins, header, ["Aria", "Guy"])
         says = [x["say"] for x in story]
         self.assertIn("It was flagged at an 812 thousand dollar market cap, with 1.2 thousand holders.", says)
+        self.assertEqual([api._spoken_for_tts(x) for x in says], says, "the Edge voices say every line as stored")
         import subprocess
         prog = ("import sys, json; sys.path.insert(0, sys.argv[1]); "
                 "from tools.tts_text_normalize import prepare_spoken_text as p; "
@@ -3609,15 +3641,16 @@ class DisclosureTest(unittest.TestCase):
             self.assertRegex(t, r"(?i)your own (AI )?model", name)
 
     def test_round3_hermes_box_and_talk_documented_the_same_in_all_three(self):
-        """The Hermes box, the Board talk player and Talk with Hermes are described in guide.md,
-        README.md and plugin.yaml the way they are built; Talk sends nothing new to PiqueSignal; the cut 'pick what you
-        hear' is never described."""
+        """The Hermes box and the Board talk player are described in guide.md, README.md and plugin.yaml the way they
+        are built; the Voice chat button is gone (catalog review: SDK only), so no doc describes it as a plugin feature
+        and voice is Hermes' own mic button / Ctrl+Alt+V; the cut 'pick what you hear' is never described."""
         src = (PLUGIN.parent / "gen" / "plugin.src.js").read_text(encoding="utf-8")
-        for lab in ("'Board talk ▶'", "'Rewind: Live'", "'Open ▾'", "'Close ▴'", "'Voice chat with Hermes'",
-                    "'End voice chat'", "'Voice chat'", "'In voice chat'",
-                    "'Try again'", "'Type instead'", "'Mic blocked?'", "'Hermes ▾'", "'Replay last'",
+        for lab in ("'Board talk ▶'", "'Rewind: Live'", "'Open ▾'", "'Close ▴'", "'Hermes ▾'", "'Replay last'",
                     "label: 'Live', act: 'rwlive'"):
             self.assertIn(lab, src, "the docs name a button the plugin draws: " + lab)
+        for lab in ("'Voice chat with Hermes'", "'End voice chat'", "'Voice chat'", "'In voice chat'", "'Try again'",
+                    "'Type instead'", "'Mic blocked?'"):
+            self.assertNotIn(lab, src, "the Voice chat button and its mic steps are gone: " + lab)
         # the player buttons are checked in the player's own btns array, not as loose strings
         player = src[src.index("btns: [['Back', 'back'"):]
         player = player[:player.index("] }")]
@@ -3627,55 +3660,38 @@ class DisclosureTest(unittest.TestCase):
         text = (PLUGIN / "guide.md").read_text(encoding="utf-8")
         s9 = text[text.index("## 9. The Hermes plugin"):text.index("## 10. The boards")]
         box = re.sub(r"\s+", " ", s9[s9.index("### 9.3 The Hermes box"):s9.index("### 9.4")])
-        for w in ("starts **closed**", "**Board talk ▶**", "**Voice chat**", "**Rewind: Live**", "**Open ▾**", "**Close ▴**",
-                  "**Ask:**", "**Listen:**", "**Rewind:**", "**Alerts:**", "**Voice chat with Hermes**", "**Resume**",
+        for w in ("starts **closed**", "**Board talk ▶**", "**Rewind: Live**", "**Open ▾**", "**Close ▴**",
+                  "**Ask:**", "**Listen:**", "**Rewind:**", "**Alerts:**", "**Resume**",
                   "**Replay last**", "One Board talk is made at a time.",
                   "remember if you left the box open or closed", "a short Rewind row under the line",
-                  "It does not open the box", "**End voice chat**"):
+                  "It does not open the box"):
             self.assertIn(w, box, w)
         priv = s9[s9.index("### 9.11 Privacy"):s9.index("### 9.12")]
-        self.assertIn("Voice chat sends nothing to PiqueSignal", priv)
-        self.assertEqual(len(re.findall(r"(?m)^### 9\.13 Voice chat with Hermes$", s9)), 1)
-        talk = re.sub(r"\s+", " ", s9[s9.index("### 9.13 Voice chat with Hermes"):])
-        # the Windows steps in the guide are the steps the mic-blocked box shows, word for word
-        block = src[src.index("const TALK_TEXT = {"):src.index("const talkV = ")]
-        steps = re.findall(r"'([^']+)'", block[block.index("steps: ["):block.index("]", block.index("steps: ["))])
-        self.assertEqual(len(steps), 5)
-        for st in steps:
-            self.assertIn(st, talk, st)
-        self.assertIn("Hermes could not use your mic.", block)
+        self.assertIn("Pique Signal never opens the mic and never records.", priv)
+        self.assertEqual(len(re.findall(r"(?m)^### 9\.13 Talking to Hermes by voice$", s9)), 1)
+        talk = re.sub(r"\s+", " ", s9[s9.index("### 9.13 Talking to Hermes by voice"):s9.index("### 9.14")])
         self.assertNotIn("**First time:**", talk)                       # the one-time voice note is gone
-        for w in ("Hermes could not use your mic.", "Ctrl+Alt+V", "**End voice chat**", "**Type instead**",
-                  "**Mic blocked?**", "Board talk is playing, it pauses", "speech-to-text set in Hermes",
-                  "Settings → Voice", "online service", "local speech-to-text", "never opens the mic", "never records",
-                  "PiqueSignal gets nothing new", "a normal chat message to your own AI model",
-                  "hover it in the chat and press the speaker", "**Read replies aloud**"):
+        for w in ("no voice chat button of its own", "Hermes' own mic button", "Ctrl+Alt+V", "Pause Board talk first",
+                  "Settings → Voice", "never opens the mic", "never records",
+                  "hover an answer in the chat and press the speaker", "**Read replies aloud**"):
             self.assertIn(w, talk, w)
         for w in ("creator fee", "smart money", "kol", "threshold", "engine", "backtest", "signal count", "score"):
             self.assertNotIn(w, talk.lower(), "never how signals are found: " + w)
         self.assertNotRegex(talk, r"(?i)\b(buy|sell|hold it|moon|gem|guarantee)\b")
         docs = {n: re.sub(r"\s+", " ", (PLUGIN / n).read_text(encoding="utf-8")) for n in ("plugin.yaml", "README.md", "guide.md")}
         for name, t in docs.items():
-            for w in ("Voice chat with Hermes", "speech-to-text set in Hermes", "never opens the mic", "Resume", "More", "Ask",
-                      "Skip"):
+            for w in ("Ctrl+Alt+V", "never opens the mic", "Resume", "More", "Ask", "Skip"):
                 self.assertIn(w, t, (name, w))
+            # the Voice chat button is never described as a plugin feature any more
+            self.assertNotRegex(t, r"(?i)voice chat with hermes|end voice chat|in voice chat|mic blocked|\*\*voice chat\*\*|"
+                                   r"turns on hermes'?s? own voice chat", name)
             # 'pick what you hear' was cut; it must never be described
             self.assertNotRegex(t, r"(?i)quick: ?3 coins|only new\b|\bmy coins\b|what do you want to hear|pick what you hear",
                                 name)
         for name in ("plugin.yaml", "README.md"):
-            self.assertIn("nothing new is sent by PiqueSignal", docs[name], name)
-            self.assertIn("Hermes' own voice chat" if name == "plugin.yaml" else "Hermes's own voice chat", docs[name], name)
+            self.assertIn("nothing new is sent by Pique Signal", docs[name], name)
+            self.assertIn("Hermes' own mic button" if name == "plugin.yaml" else "Hermes's own mic button", docs[name], name)
         self.assertIn("Read replies aloud", docs["README.md"])
-        # Hermes' GPT-Live voice chat sends the mic to OpenAI (not the speech-to-text setting); Talk fires
-        # Hermes' own voice toggle, so all three docs say so in the same words
-        for name, t in docs.items():
-            # ONE sentence, GPT-Live is the example of "that service" (no clashing "instead")
-            self.assertIn("if you picked a live voice model in Hermes, your voice goes to that service, so for GPT-Live it "
-                          "goes to OpenAI, paid with your own OpenAI key", re.sub(r"\s+", " ", t).replace("If you picked", "if you picked"), name)
-            self.assertNotIn("OpenAI instead", re.sub(r"\s+", " ", t), name)
-            # the pane's Talk note words, the same in all three docs (Hermes 0.23.0 ships voice_live.py gpt-live)
-            self.assertIn("if you picked a live voice model in Hermes, your voice goes to that service",
-                          t.replace("If you picked", "if you picked"), name)
         # the agent's no-key words name "Open ▾" as a button (not a bare verb), then Unlock
         self.assertIn("press the 'Open ▾' button in the Hermes box above the board, then press 'Unlock with your key' "
                       "(3 short steps)", agent_half.NO_KEY)
@@ -3711,14 +3727,14 @@ class DisclosureTest(unittest.TestCase):
         advice = r"(?i)\b(buy|sell|hold it|moon|gem|guarantee)\b"
         parts = {"guide 9.3-9.13": re.sub(r"\s+", " ", s9[s9.index("### 9.3 The Hermes box"):])}
         cuts = {"README.md": (("- **Hermes box:**", "- **How it works:**"),
-                              ("- **Board talk:** the **Board talk ▶**", "- **Voice chat with Hermes:** **Voice chat**"),
-                              ("- **Voice chat with Hermes:** **Voice chat**", "Read replies aloud* in Hermes's voice controls."),
-                              ("- **Voice chat with Hermes:** nothing new", "never reads what you say or type."),
-                              ("*More* and *Ask* in the Board talk player)", "the same as typing it."),
+                              ("- **Board talk:** the **Board talk ▶**", "- **Talking by voice:**"),
+                              ("- **Talking by voice:**", "Read replies aloud* in Hermes's voice controls."),
+                              ("- **Talking to Hermes by voice:** nothing new", "never records."),
+                              ("*More* and *Ask* in the Board talk player)", "only when you click them."),
                               ("whether the Hermes box is open on each board", "(`liveMorningDay`).")),
                 "plugin.yaml": (("with Back, Pause, Skip, Stop and Resume", "starts closed."),
                                 ("Replay and Resume re-speak", "kept in memory only):"),
-                                ("Voice chat with Hermes only turns on", "never opens the mic or records."),
+                                ("Pique Signal has no voice chat of its own", "the mic or records."),
                                 ("whether the Hermes box is open", "Hermes plugin storage."))}
         for name, pairs in cuts.items():
             t = docs[name]
@@ -4206,7 +4222,7 @@ class Audit2ManifestVersionTest(unittest.TestCase):
         self.assertEqual(man["version"], core.VERSION)
         m = re.search(r"(?m)^version:\s*(\S+)\s*$", (PLUGIN / "plugin.yaml").read_text(encoding="utf-8"))
         self.assertEqual(m.group(1), core.VERSION)
-        self.assertEqual(core.VERSION, "1.4.0")               # the hackathon release (read-it-right + notes + Deep Check)
+        self.assertEqual(core.VERSION, "1.5.0")               # 1.5.0: the catalog review fix release (1.4.0 = the hackathon release)
 
 
 class Audit2LiveSlotTests(unittest.TestCase):
@@ -4300,7 +4316,7 @@ class ReadItRightTest(Base):
     """Text Hermes may read aloud (the speaker, Read replies aloud, Voice chat). Hermes' voice reads
     "$3.6M" and "45m" as metres and a contract address letter by letter: the board facts carry money, ages and
     multiples in words, the card value is ps_1.<mint> and the rules ask for no contract address in the text. The
-    agent half's texts write the name as "PiqueSignal" (one word)."""
+    name is "Pique Signal" (two words) in every chat text."""
 
     # the same table as test_src.mjs (the pane's usdWords mirror)
     USD = ((3_600_000, "3.6 million dollars"), (3_612_345, "3.6 million dollars"), (812_000, "812 thousand dollars"),
@@ -4352,8 +4368,9 @@ class ReadItRightTest(Base):
         self.assertIn("Your reply may be read aloud: write money and times in words as the board data gives them; when "
                       "the user asks for a contract address, write it ONLY inside a fenced ``` code block, never in "
                       "normal text and never in inline backticks.", h)
-        self.assertNotIn("Pique Signal", h)                             # the name is one word in chat
-        self.assertNotIn("two words", h)
+        self.assertTrue(h.startswith("[Pique Signal panel] "), h[:40])  # the name is two words in chat
+        self.assertTrue(h.endswith(" Write the name as Pique Signal (two words)."), h[-80:])
+        self.assertNotIn("PiqueSignal", h)
 
     def test_research_rule_and_tool_texts(self):
         rule = ("Your reply may be read aloud: when the user asks for a contract address, write it ONLY inside a fenced "
@@ -4362,9 +4379,11 @@ class ReadItRightTest(Base):
         self.assertTrue(agent_half.RESEARCH_RULE.endswith(rule))
         for name in ("piquesignal_board", "piquesignal_point"):
             self.assertIn(rule, self.ctx.tools[name][0]["description"], name)
-        self.assertIn("how PiqueSignal, the boards", agent_half.GUIDE_NUDGE)
-        for t in (agent_half.RESEARCH_RULE, agent_half.GUIDE_NUDGE, agent_half.DEEP_SCHEMA["description"]):
-            self.assertNotIn("Pique Signal", t)                 # the name is one word in chat
+        self.assertIn("how Pique Signal, the boards", agent_half.GUIDE_NUDGE)
+        self.assertNotIn("Voice chat", agent_half.GUIDE_NUDGE)  # the plugin has no Voice chat button any more
+        for t in (agent_half.RESEARCH_RULE, agent_half.GUIDE_NUDGE, agent_half.DEEP_SCHEMA["description"],
+                  agent_half.NO_KEY, agent_half.MEMBER_SWITCH_OFF):
+            self.assertNotIn("PiqueSignal", t)                  # the name is two words in chat
             self.assertNotIn("two words", t)
         self.assertIn(agent_half.GUIDE_NUDGE, self.ctx.tools["piquesignal_board"][0]["description"])
 
@@ -4381,6 +4400,356 @@ class ReadItRightTest(Base):
                                                "sell, hold, skip or avoid a coin.")
         self.assertEqual(core.GUIDE_NOTE, "Answer only from this guide; never invent features, prices or plans. Not "
                                           "financial advice.")
+
+
+class _SdkStore:
+    """Board talk's store (core.talk_tts_ctx, set by register()) for one test class; put back after."""
+
+    def store_set(self, dispatch=None, on=None, get_config=None):
+        if not hasattr(self, "_store_orig"):
+            self._store_orig = getattr(core, "talk_tts_ctx", None)
+        self.dispatched = []
+        cfg = {} if on is None else {"board_talk_tts_via_sdk": on}
+        core.talk_tts_ctx = {"dispatch": dispatch,
+                             "get_config": get_config or (lambda key, default=None: cfg.get(key, default))}
+
+    def store_back(self):
+        if hasattr(self, "_store_orig"):
+            core.talk_tts_ctx = self._store_orig
+        api._load_tts = LIVE_LOAD_TTS          # the real lazy import (a loop that calls setUp again re-saves a fake)
+
+
+class BoardTalkSdkOffTest(_SdkStore, LiveSpeakTest):
+    """The setting board_talk_tts_via_sdk OFF (the shipped default) while Hermes gave a dispatch_tool: every voice-test
+    check of LiveSpeakTest runs again unchanged (the old path: Hermes' tool imported directly) and dispatch is never
+    called."""
+
+    def setUp(self):
+        super().setUp()
+        self.store_set(dispatch=self.no_dispatch, on=False)
+
+    def tearDown(self):
+        self.assertEqual(self.dispatched, [], "the switch is off: dispatch_tool is never called")
+        super().tearDown()
+        self.store_back()
+
+    def no_dispatch(self, name, args, **kw):
+        self.dispatched.append((name, args))
+        raise AssertionError("dispatch_tool used while the switch is off")
+
+    def test_unset_or_not_a_real_true_is_off(self):
+        for on in (None, "true", 1, "on", [True]):
+            self.setUp()
+            self.store_set(dispatch=self.no_dispatch, on=on)
+            self.assertTrue(self.speak()["ok"], on)
+            self.assertEqual(len(self.calls), 1, on)
+            self.tearDown()
+
+
+class BoardTalkSdkOnTest(_SdkStore, LiveSpeakTest):
+    """The setting ON: the non-Edge voice goes through Hermes' public ctx.dispatch_tool('text_to_speech', ...) (here a
+    fake that behaves like Hermes' registry.dispatch: the same tool, its exceptions turned into an error JSON). Every
+    voice-test check of LiveSpeakTest runs again: the same text, speed, profile scope, temp folder, .mp3, size cap,
+    MP3 bytes, timeouts (a hung tool), error words, and the Edge voices untouched. The direct import is never used."""
+
+    def setUp(self):
+        super().setUp()
+        self.store_set(dispatch=self.dispatch, on=True)
+        api._load_tts = self.no_import
+
+    def tearDown(self):
+        super().tearDown()
+        self.store_back()
+
+    def no_import(self):
+        raise AssertionError("the direct tools.tts_tool import is used while the switch is on")
+
+    def dispatch(self, name, args, **kw):
+        self.dispatched.append((name, dict(args), kw))
+        if name != "text_to_speech":
+            return json.dumps({"error": "Unknown tool: %s" % name})
+        try:
+            return self.fake_tts(args.get("text", ""), **{k: args[k] for k in ("output_path", "speed") if k in args})
+        except Exception as e:                 # registry.dispatch never raises: it answers an error JSON
+            return json.dumps({"error": "Tool execution failed: %s" % type(e).__name__})
+
+    def test_missing_tts_module_is_a_clean_error(self):
+        """With dispatch the plugin never imports the tool module: a missing tools.tts_tool changes nothing here."""
+        from unittest import mock
+        with mock.patch.dict(sys.modules, {"tools.tts_tool": None}):
+            self.assertTrue(self.speak()["ok"])
+        self.assertEqual(api._live["running"], 0)
+
+    def test_dispatch_gets_the_tool_name_and_its_arguments(self):
+        self.assertTrue(self.speak()["ok"])
+        self.assertEqual(len(self.dispatched), 1)
+        name, args, kw = self.dispatched[0]
+        self.assertEqual(name, "text_to_speech")
+        self.assertEqual(set(args), {"text", "output_path", "speed"})
+        self.assertEqual(args["text"], api.LIVE_TEST_LINE)
+        self.assertEqual(args["speed"], api.TALK_TOOL_SPEED)
+        self.assertEqual(Path(args["output_path"]).name, "live-test.mp3")
+        self.assertTrue(Path(args["output_path"]).parent.name.startswith("pqs-live-"))
+        self.assertEqual(kw, {})
+        self.assert_temp_gone()
+
+    def test_a_dict_answer_is_read_like_the_json_one(self):
+        def as_dict(name, args, **kw):
+            return json.loads(self.dispatch(name, args, **kw))
+        self.store_set(dispatch=as_dict, on=True)
+        self.assertTrue(self.speak()["ok"])
+
+    def test_bad_dispatch_answers_are_refused(self):
+        import shutil
+
+        def unknown(name, args, **kw):
+            return json.dumps({"error": "Unknown tool: text_to_speech"})
+
+        def raises(name, args, **kw):
+            raise RuntimeError(r"C:\Users\someone\secret.txt")
+
+        def not_json(name, args, **kw):
+            return "<html>"
+
+        def a_list(name, args, **kw):
+            return ["ok"]
+
+        def success_no_file(name, args, **kw):
+            return json.dumps({"success": True})
+
+        def success_text(name, args, **kw):
+            Path(args["output_path"]).write_bytes(self.MP3)
+            return json.dumps({"success": "true", "file_path": args["output_path"]})
+
+        def other_file(name, args, **kw):
+            out = Path(tempfile.mkdtemp(prefix="pqs-other-")) / "x.mp3"
+            out.write_bytes(self.MP3)
+            self.outside = out
+            return json.dumps({"success": True, "file_path": str(out)})
+
+        def ogg(name, args, **kw):
+            out = Path(args["output_path"]).with_suffix(".ogg")
+            out.write_bytes(self.MP3)
+            return json.dumps({"success": True, "file_path": str(out)})
+
+        def not_mp3(name, args, **kw):
+            Path(args["output_path"]).write_bytes(b"<html>not audio</html>")
+            return json.dumps({"success": True, "file_path": args["output_path"]})
+
+        def too_big(name, args, **kw):
+            Path(args["output_path"]).write_bytes(self.MP3 + b"\x00" * api.LIVE_AUDIO_MAX_BYTES)
+            return json.dumps({"success": True, "file_path": args["output_path"]})
+
+        cases = [(unknown, "tts_failed"), (raises, "tts_failed"), (not_json, "tts_failed"), (a_list, "tts_failed"),
+                 (success_no_file, "tts_failed"), (success_text, "tts_failed"), (other_file, "audio_missing"),
+                 (ogg, "audio_format"), (not_mp3, "audio_format"), (too_big, "too_large")]
+        for fn, code in cases:
+            self.setUp()
+            self.store_set(dispatch=fn, on=True)
+            with self.assertLogs(api._log, level="INFO") as logs:
+                self.assertEqual(self.speak(), {"ok": False, "error": code}, fn.__name__)
+            self.assertNotIn("secret", " ".join(logs.output))
+            self.assertEqual(api._live["running"], 0, fn.__name__)
+            if fn is other_file:
+                self.assertTrue(self.outside.exists(), "a file outside the private folder is never read or deleted")
+                shutil.rmtree(self.outside.parent, ignore_errors=True)
+            self.tearDown()
+
+    def test_dispatch_missing_falls_back_to_the_old_path(self):
+        """The switch on, but this Hermes gave no dispatch_tool (or no get_config, or there is no store, or reading
+        the setting fails): Hermes' tool imported directly, as before."""
+        old = []
+
+        def old_tts():
+            def tts(text, output_path=None, **kw):
+                old.append(kw)
+                return self.fake_tts(text, output_path, **kw)
+            return tts
+        for case in ("no_dispatch", "no_get_config", "no_store", "store_not_a_dict", "get_config_raises"):
+            self.setUp()
+            api._load_tts = old_tts
+            if case == "no_dispatch":
+                self.store_set(dispatch=None, on=True)
+            elif case == "no_get_config":
+                core.talk_tts_ctx["get_config"] = None
+            elif case == "no_store":
+                del core.talk_tts_ctx
+            elif case == "store_not_a_dict":
+                core.talk_tts_ctx = [self.dispatch]
+            else:
+                def boom(key, default=None):
+                    raise RuntimeError("config unreadable")
+                self.store_set(dispatch=self.dispatch, get_config=boom)
+            self.assertTrue(self.speak()["ok"], case)
+            self.assertEqual(self.dispatched, [], case)
+            self.assertEqual(old, [{"speed": 1.15}], case)
+            old.clear()
+            self.tearDown()
+
+    def test_the_setting_is_read_at_every_line(self):
+        self.assertTrue(self.speak()["ok"])
+        self.assertEqual(len(self.dispatched), 1)
+        api._live["last"] = None
+        core.talk_tts_ctx["get_config"] = lambda key, default=None: False
+        api._load_tts = lambda: self.fake_tts
+        self.assertTrue(self.speak()["ok"])
+        self.assertEqual(len(self.dispatched), 1, "turned off: the next line takes the old path")
+        self.assertEqual(len(self.calls), 2)
+
+
+class BoardTalkSdkEpisodeTest(LiveEpisodeBase):
+    """A show's line with the switch on: dispatch speaks the stored line; turned off: the old path again."""
+
+    def test_a_show_line_through_dispatch(self):
+        orig = getattr(core, "talk_tts_ctx", None)
+        got = []
+
+        def dispatch(name, args, **kw):
+            got.append((name, args["text"]))
+            return self.fake_tts(args["text"], output_path=args["output_path"], speed=args["speed"])
+        try:
+            self.llm.answer = {"stories": [{"coin_id": "c1", "lines": ["$POPCAT is on the board."]}]}
+            res = self.episode()
+            self.assertTrue(res["ok"], res)
+            ep = res["ep"]
+            core.talk_tts_ctx = {"dispatch": dispatch,
+                                 "get_config": lambda key, default=None: key == api.TALK_TTS_SETTING}
+            api._ep["audio_last"] = None
+            a = asyncio_run(api.live_episode_audio(ep, 0))
+            self.assertTrue(a["ok"], a)
+            self.assertEqual(got, [("text_to_speech", api._episodes[ep]["segs"][0]["say"])])
+            self.assertEqual(self.tts_calls[-1]["kw"], {"speed": 1.15})
+            core.talk_tts_ctx = {"dispatch": dispatch, "get_config": lambda key, default=None: default}
+            api._ep["audio_last"] = None
+            a = asyncio_run(api.live_episode_audio(ep, 1))
+            self.assertTrue(a["ok"], a)
+            self.assertEqual(len(got), 1, "the setting off: the old path")
+            self.assertEqual(len(self.tts_calls), 2)
+        finally:
+            core.talk_tts_ctx = orig
+
+
+class BoardTalkSdkRegisterTest(unittest.TestCase):
+    """register() keeps ctx.dispatch_tool + ctx.get_config for Board talk, also with the Deep Check switched off (and
+    then the Deep Check's own store stays empty: no X search can start through it)."""
+
+    def setUp(self):
+        self._orig = (core.DEEP_CHECK, getattr(core, "talk_tts_ctx", None), core._dc_ctx["dispatch"])
+
+    def tearDown(self):
+        core.DEEP_CHECK, core.talk_tts_ctx, dispatch = self._orig
+        core.set_deep_ctx(dispatch)
+        core.set_live_ctx(None, None)
+
+    def test_stored_with_the_deep_check_off(self):
+        core.set_deep_ctx(None)
+        core.DEEP_CHECK = False
+        ctx = FakeCtx()
+        ctx.dispatch_tool = lambda name, args, **kw: "{}"
+        agent_half.register(ctx)
+        self.assertIs(core.talk_tts_ctx["dispatch"], ctx.dispatch_tool)
+        self.assertEqual(core.talk_tts_ctx["get_config"], ctx.get_config)
+        self.assertIsNone(core._dc_ctx["dispatch"], "the Deep Check is off: its store stays empty")
+        self.assertNotIn("piquesignal_deep_check", ctx.tools)
+
+    def test_stored_with_the_deep_check_on(self):
+        core.DEEP_CHECK = True
+        ctx = FakeCtx()
+        ctx.dispatch_tool = lambda name, args, **kw: "{}"
+        agent_half.register(ctx)
+        self.assertIs(core.talk_tts_ctx["dispatch"], ctx.dispatch_tool)
+        self.assertIs(core._dc_ctx["dispatch"], ctx.dispatch_tool)
+
+    def test_no_dispatch_or_a_failing_one(self):
+        ctx = FakeCtx()
+        agent_half.register(ctx)
+        self.assertIsNone(core.talk_tts_ctx["dispatch"])
+
+        class Ctx(FakeCtx):
+            @property
+            def dispatch_tool(self):
+                raise RuntimeError("no dispatch here")
+        ctx = Ctx()
+        agent_half.register(ctx)
+        self.assertEqual(core.talk_tts_ctx, {"dispatch": None, "get_config": None})
+        self.assertIn("piquesignal_board", ctx.tools, "register goes on")
+
+    def test_shipped_default_is_off(self):
+        yaml = (PLUGIN / "plugin.yaml").read_text(encoding="utf-8")
+        m = re.search(r"(?m)^  board_talk_tts_via_sdk:\n((?:    .*\n)+)", yaml)
+        self.assertIsNotNone(m)
+        block = m.group(1)
+        self.assertIn("    type: bool\n", block)
+        self.assertIn("    default: false\n", block)
+        self.assertRegex(block, r"(?m)^    label: \S")
+        self.assertRegex(block, r"(?m)^    description: \"Off \(default\)")
+        self.assertEqual(api.TALK_TTS_SETTING, "board_talk_tts_via_sdk")
+        ctx = FakeCtx()
+        ctx.dispatch_tool = lambda name, args, **kw: "{}"
+        agent_half.register(ctx)
+        self.assertIsNone(api._sdk_dispatch(), "the setting not set: off")
+        ctx.config["board_talk_tts_via_sdk"] = True
+        self.assertIs(api._sdk_dispatch(), ctx.dispatch_tool)
+
+
+class SpokenTextTest(unittest.TestCase):
+    """The Edge voices' text: core.live_spoken with single spaces (no private Hermes import)."""
+
+    def test_no_private_speech_cleanup_import(self):
+        src = (PLUGIN / "dashboard" / "plugin_api.py").read_text(encoding="utf-8")
+        self.assertNotIn("tts_text_normalize", src)
+        self.assertNotIn("prepare_spoken_text", src)
+
+    def test_cleanup(self):
+        self.assertEqual(api._spoken_for_tts(api.LIVE_TEST_LINE), api.LIVE_TEST_LINE)
+        self.assertEqual(api._spoken_for_tts("  $WIF   is up.\n"), "WIF is up.")
+        self.assertEqual(api._spoken_for_tts(core.LIVE_MASKED + " is new."), core.LIVE_MASKED_SPOKEN + " is new.")
+        self.assertEqual(api._spoken_for_tts("caf\u00e9 \U0001F680 ok"), "caf ok")
+        self.assertEqual(api._spoken_for_tts(None), "")
+        # a stray symbol is said as a word, as Hermes' own speech cleanup says it (tools/tts_text_normalize.py:124-127)
+        self.assertEqual(api._spoken_for_tts("up 40% & ~2x"), "up 40 percent and about 2x")
+        self.assertEqual(api._spoken_for_tts("40 %, 5%."), "40 percent, 5 percent.")
+        self.assertEqual(api._spoken_for_tts("100%% sure"), "100 percent% sure")
+        self.assertEqual(api._spoken_for_tts("% alone"), "% alone")
+
+
+class NameTest(unittest.TestCase):
+    """The product name is "Pique Signal" (two words) in every text of the agent half and the panel backend; ids,
+    tool names, the setting key and URLs keep "piquesignal"."""
+
+    def test_sources_have_the_one_word_name_only_where_it_is_matched(self):
+        self.assertNotIn("PiqueSignal", (PLUGIN / "dashboard" / "plugin_api.py").read_text(encoding="utf-8"))
+        left = [l.strip() for l in (PLUGIN / "__init__.py").read_text(encoding="utf-8").splitlines()
+                if "PiqueSignal" in l]
+        self.assertEqual(left, ['(today) or "PiqueSignal" (a brief job made from an older blueprint keeps that '
+                                'one-word prompt): both are ours."""'])
+
+    def test_texts(self):
+        self.assertEqual(agent_half.BRIEF["title"], "Pique Signal morning brief")
+        self.assertIn("your Pique Signal board", agent_half.BRIEF["description"])
+        self.assertIn("write a short Pique Signal morning brief", agent_half.BRIEF["prompt_template"])
+        view = next(s for s in agent_half.BRIEF["slots"] if s["name"] == "view")
+        self.assertIn("the Pique Signal setting", view["help"])
+        self.assertIn("Hermes Settings > Plugins > Pique Signal.", agent_half.NO_KEY)
+        self.assertIn("On the Pique Signal board", agent_half.NO_KEY)
+        self.assertIn("(Pique Signal setting 'Let Hermes", agent_half.MEMBER_SWITCH_OFF)
+        for sch in (agent_half.BOARD_SCHEMA, agent_half.POINT_SCHEMA, agent_half.EXPLAIN_SCHEMA,
+                    agent_half.GUIDE_SCHEMA, agent_half.DEEP_SCHEMA, agent_half._filters_schema(core)):
+            self.assertIn("Pique Signal", sch["description"], sch["name"])
+            self.assertNotIn("PiqueSignal", json.dumps(sch), sch["name"])
+            self.assertTrue(sch["name"].startswith("piquesignal_"))
+        self.assertTrue(api.LIVE_TEST_LINE.startswith("Pique Signal Board talk test."))
+        self.assertTrue(agent_half.__doc__.startswith("Pique Signal for Hermes: "))
+        self.assertTrue(api.__doc__.startswith("Pique Signal backend for "))
+
+    def test_manifest_label(self):
+        yaml = (PLUGIN / "plugin.yaml").read_text(encoding="utf-8")
+        self.assertRegex(yaml, r"(?m)^name: piquesignal$")
+        self.assertRegex(yaml, r"(?m)^label: 'Pique Signal'$")
+        self.assertRegex(yaml, r"(?m)^    label: Pique Signal member key$")
+        self.assertRegex(yaml, r"(?m)^    env: PIQUESIGNAL_API_KEY$")
+        man = json.loads((PLUGIN / "dashboard" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual((man["name"], man["label"], man["tab"]["path"]), ("piquesignal", "Pique Signal", "/piquesignal"))
 
 
 LIVE_LOAD_TTS = api._load_tts

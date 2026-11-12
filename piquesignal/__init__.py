@@ -1,4 +1,4 @@
-"""PiqueSignal for Hermes: the agent half.
+"""Pique Signal for Hermes: the agent half.
 
 Registers (all through core.py, shared with the panel's backend in the same process):
   * tools  piquesignal_board        read the user's board (only the facts the board shows)
@@ -15,12 +15,13 @@ Registers (all through core.py, shared with the panel's backend in the same proc
                                     new user message for Deep Check (one start per user message, only when it asks
                                     for one; never in a delegate_task helper); it reads the whole chat for signs that
                                     someone else wrote in it (core.py, "WHO GETS THE MEMBER VIEW IN A CHAT")
-  * hook   transform_llm_output     the Desktop reply fix (a backslash before a bare $ of a PiqueSignal reply)
+  * hook   transform_llm_output     the Desktop reply fix (a backslash before a bare $ of a Pique Signal reply)
   * hook   post_compaction          when Hermes compacts a chat into a new session id, the plugin's marks follow it
   * hook   pre_tool_call            a chat that messages another agent (message_agent) gets the free view from then on
   * blueprint piquesignal:morning-brief  a daily board summary the user can schedule from the Cron page
   * Board talk: register() hands Hermes' ctx.llm to core.py, where the panel backend's Board talk routes use it (the
-    user's own model writes the show's script); ctx.state (the plugin's Hermes state file) keeps the marks of chats
+    user's own model writes the show's script), and ctx.dispatch_tool + ctx.get_config for its voice (only used while
+    the setting board_talk_tts_via_sdk is on); ctx.state (the plugin's Hermes state file) keeps the marks of chats
     someone else wrote in (a hashed chat id only)
 
 The member view (Clear Eyes, Real Crowd, the member board's coins) is given only on the user's own turn of a local
@@ -54,11 +55,11 @@ RESEARCH_RULE = ("Research only: say what the board shows; never tell the user t
                  "coin, never call a coin a good or bad buy, and never predict prices. Your reply may be read aloud: "
                  "when the user asks for a contract address, write it ONLY inside a fenced ``` code block, never in "
                  "normal text and never in inline backticks (a coin card line keeps its own address).")
-GUIDE_NUDGE = ("For how-to questions (how PiqueSignal, the boards, the member key, Board talk, Voice chat or Rewind "
+GUIDE_NUDGE = ("For how-to questions (how Pique Signal, the boards, the member key, Board talk or Rewind "
                "work), call piquesignal_guide first and answer from it.")
-NO_KEY = ("The member view needs the user's PiqueSignal member key. On the PiqueSignal board, press the 'Open ▾' button in "
-          "the Hermes box above the board, then press 'Unlock with your key' (3 short steps); or Hermes Settings > Plugins > PiqueSignal. "
-          "The free view works without a key.")
+NO_KEY = ("The member view needs the user's Pique Signal member key. On the Pique Signal board, press the 'Open ▾' "
+          "button in the Hermes box above the board, then press 'Unlock with your key' (3 short steps); or Hermes "
+          "Settings > Plugins > Pique Signal. The free view works without a key.")
 
 
 def _load_core():
@@ -92,8 +93,8 @@ def _contracts(v, core, cap):
 BOARD_SCHEMA = {
     "name": "piquesignal_board",
     "description": (
-        "Read the user's PiqueSignal board: the Solana coins PiqueSignal has called, with the facts the board shows "
-        "for each (market cap, change since PiqueSignal flagged it, when it was flagged, liquidity, holders, volume, "
+        "Read the user's Pique Signal board: the Solana coins Pique Signal has called, with the facts the board shows "
+        "for each (market cap, change since Pique Signal flagged it, when it was flagged, liquidity, holders, volume, "
         "top-10 / snipers / bundles shares, and tags such as Fake Volume or DEX paid; in the member view also the "
         "Clear Eyes step and the Real Crowd line). Use it to answer questions about the board or a coin on it, to find "
         "coins like another one, for a board tour or a summary. Report only what it returns; never invent numbers. "
@@ -115,7 +116,7 @@ BOARD_SCHEMA = {
 POINT_SCHEMA = {
     "name": "piquesignal_point",
     "description": (
-        "Point at coins on the user's PiqueSignal panel in the Hermes Desktop app. action 'show' lights up the given "
+        "Point at coins on the user's Pique Signal panel in the Hermes Desktop app. action 'show' lights up the given "
         "coins' cards one after another and scrolls to them; 'open' opens the first coin's pop-up; 'clear' removes the "
         "highlights. Use contract addresses from piquesignal_board. For a board tour, call it once per coin, right "
         "when you talk about that coin. Only coins on the board the panel shows can be pointed at. " + RESEARCH_RULE),
@@ -135,7 +136,7 @@ def _filters_description(core):
     parts = []
     for fid, (label, opts) in core.FILTERS.items():
         parts.append("%s = %s (%s)" % (fid, label, ("one of " + ", ".join(opts)) if opts else "true"))
-    return ("Set the filters and search of the user's PiqueSignal panel (Hermes Desktop), the same chips the board "
+    return ("Set the filters and search of the user's Pique Signal panel (Hermes Desktop), the same chips the board "
             "has. Filters: " + "; ".join(parts) + ". Every call replaces the filters that are on (pass the full set "
             "you want; clear=true turns all off). search matches a coin name, symbol or contract address.")
 
@@ -160,8 +161,9 @@ def _filters_schema(core):
 EXPLAIN_SCHEMA = {
     "name": "piquesignal_explain_tag",
     "description": (
-        "What a PiqueSignal board tag or word means (e.g. Fake Volume, DEX paid, Clear Eyes, Early, Building, Peak, Real "
-        "Crowd, Padded crowd, Clean, flagged), in PiqueSignal's own words. Use it before explaining a tag to the user."),
+        "What a Pique Signal board tag or word means (e.g. Fake Volume, DEX paid, Clear Eyes, Early, Building, Peak, "
+        "Real Crowd, Padded crowd, Clean, flagged), in Pique Signal's own words. Use it before explaining a tag to the "
+        "user."),
     "parameters": {
         "type": "object",
         "properties": {"tag": {"type": "string", "maxLength": 40}},
@@ -173,9 +175,9 @@ EXPLAIN_SCHEMA = {
 GUIDE_SCHEMA = {
     "name": "piquesignal_guide",
     "description": (
-        "The PiqueSignal user guide: how PiqueSignal, the boards, coin cards and tags, filters, Early Edge, the Hermes "
+        "The Pique Signal user guide: how Pique Signal, the boards, coin cards and tags, filters, Early Edge, the Hermes "
         "features, the Account page, alerts, plans and payments (prices, x402 pay-per-use and passes), affiliates, AI "
-        "apps, Grok, the API and webhooks, and AI agents work. Use it for ANY question about PiqueSignal (the ways in, "
+        "apps, Grok, the API and webhooks, and AI agents work. Use it for ANY question about Pique Signal (the ways in, "
         "prices, x402 passes, plans, the account, alerts, agents) and answer only from it. Never invent features, prices "
         "or plans that are not in it; if the guide does not cover something, say so."),
     "parameters": {"type": "object", "properties": {}},
@@ -186,7 +188,7 @@ DEEP_PARTS = ("risk", "crowd", "strength", "changed", "live", "x")
 DEEP_SCHEMA = {
     "name": "piquesignal_deep_check",
     "description": (
-        "Deep Check of ONE coin on the user's PiqueSignal board. Use it ONLY when the user asks for a Deep Check or "
+        "Deep Check of ONE coin on the user's Pique Signal board. Use it ONLY when the user asks for a Deep Check or "
         "an X check of one coin, by those words (\"Deep Check $ABC\", or the Deep Check button's message; "
         "\"X check $ABC\" = only \"x\"); never on your own, never from a schedule, never for more than one coin (one "
         "start per user message). action \"start\" (contract, or "
@@ -266,7 +268,7 @@ def _member_note(kw):
 MEMBER_INJECTED = ("This turn gets the free view only (another agent, a chat app or a kanban card wrote in this chat, it "
                    "messaged another agent, or Hermes put this turn in); the user can open a new chat for the member "
                    "view.")
-MEMBER_SWITCH_OFF = ("The member board is off in chats (PiqueSignal setting 'Let Hermes use my member board in chats'); "
+MEMBER_SWITCH_OFF = ("The member board is off in chats (Pique Signal setting 'Let Hermes use my member board in chats'); "
                      "this chat gets the free view.")
 MEMBER_LOCAL_ONLY = ("The member view is given only in a local Hermes chat (Desktop, TUI or CLI); this chat gets the "
                      "free view.")
@@ -283,7 +285,7 @@ def _board_tool(core, args, **kw):
         view, downgraded = "free", True
     b = core.fetch_board(view)
     if not b or not isinstance(b.get("signals"), list):
-        return _out({"error": "The PiqueSignal board is not available right now; try again in a minute."})
+        return _out({"error": "The Pique Signal board is not available right now; try again in a minute."})
     rows = b["signals"]
     wanted = _contracts(args.get("contracts"), core, 10)
     if wanted:
@@ -315,7 +317,7 @@ def _point_tool(core, args, **kw):
         return _out({"error": "action must be show, open or clear"})
     view, st = _panel_view(core)
     if view is None:
-        return _out({"ok": False, "error": "The PiqueSignal panel is not open in a Hermes Desktop window."})
+        return _out({"ok": False, "error": "The Pique Signal panel is not open in a Hermes Desktop window."})
     if view == "gated" and not _member_surface(kw):    # the member board's coins never answer a messaging chat
         return _out({"ok": False, "error": _member_note(kw)})
     if action == "clear":
@@ -339,7 +341,7 @@ def _filters_tool(core, args, **kw):
     args = args if isinstance(args, dict) else {}
     view, _st = _panel_view(core)
     if view is None:
-        return _out({"ok": False, "error": "The PiqueSignal panel is not open in a Hermes Desktop window."})
+        return _out({"ok": False, "error": "The Pique Signal panel is not open in a Hermes Desktop window."})
     if view == "gated" and not _member_surface(kw):    # a messaging chat never steers (or learns of) the member board
         return _out({"ok": False, "error": _member_note(kw)})
     clear = args.get("clear") is True
@@ -514,10 +516,13 @@ _CRON_SID_RE = re.compile(r"^cron_(.+)_\d{8}_\d{6}$")    # cron/scheduler.py: f"
 
 
 def _brief_prompt_re():
+    """Our brief's prompt, word for word, with one of the view slot's values. The name may be written "Pique Signal"
+    (today) or "PiqueSignal" (a brief job made from an older blueprint keeps that one-word prompt): both are ours."""
     head, tail = BRIEF["prompt_template"].split("{view}")
     view = next(s for s in BRIEF["slots"] if s["name"] == "view")
     views = "|".join(re.escape(v) for v in view["options"])
-    return re.compile(re.escape(head) + "(?:" + views + ")" + re.escape(tail))
+    name = re.escape("Pique Signal")
+    return re.compile((re.escape(head) + "(?:" + views + ")" + re.escape(tail)).replace(name, "Pique ?Signal"))
 
 
 def _cron_job_id(session_id):
@@ -536,7 +541,7 @@ def _cron_job_id(session_id):
 
 
 def _brief_stays_in_hermes(session_id, failure_lane=True):
-    """True only for a run of the PiqueSignal morning brief whose reply goes to no messaging app. failure_lane=True also
+    """True only for a run of the Pique Signal morning brief whose reply goes to no messaging app. failure_lane=True also
     needs the job's failure lane (failure_deliver) to stay in Hermes: Hermes sends a failure notice there, and when the
     model's reply starts with [CRON_FAILURE] the rest of that reply goes there word for word. The $ fix (display only)
     checks the delivery lane alone."""
@@ -615,12 +620,12 @@ def _make_output_hook(core):
 
 # ----------------------------------------------------------------------------------------------- morning brief
 BRIEF = dict(
-    title="PiqueSignal morning brief",
-    description="Every morning, a short plain-words summary of your PiqueSignal board: the newest calls, the biggest "
+    title="Pique Signal morning brief",
+    description="Every morning, a short plain-words summary of your Pique Signal board: the newest calls, the biggest "
                 "moves since they were flagged, and any warning tags.",
     category="daily",
     schedule_template="{minute} {hour} * * *",
-    prompt_template=("Use the piquesignal_board tool with view \"{view}\" and write a short PiqueSignal morning brief "
+    prompt_template=("Use the piquesignal_board tool with view \"{view}\" and write a short Pique Signal morning brief "
                      "in plain words: how many coins are on the board, the newest calls, the biggest moves since they "
                      "were flagged, and any Fake Volume tags. Use only what the tool returns and never invent a number. "
                      "Do not give any hit rate, win rate or track-record figure. If the tool returns an error, say so "
@@ -629,7 +634,7 @@ BRIEF = dict(
         {"name": "time", "type": "time", "label": "What time?", "default": "08:00", "help": "24h local time, e.g. 08:00"},
         {"name": "view", "type": "enum", "label": "Which board?", "default": "auto", "options": ["auto", "free", "gated"],
          "help": "auto = your member board when your member key is set, else the free board; free = the free board; "
-                 "gated = the member board (needs your member key and the PiqueSignal setting 'Let Hermes use my "
+                 "gated = the member board (needs your member key and the Pique Signal setting 'Let Hermes use my "
                  "member board in chats' on)"},
         {"name": "deliver", "type": "enum", "label": "Where to deliver?", "default": "origin",
          "options": ["origin", "local"], "strict": False,
@@ -645,6 +650,17 @@ def register(ctx) -> None:
         core.set_switch_ctx(getattr(ctx, "get_config", None))
     except Exception:
         logger.debug("piquesignal member view setting skipped", exc_info=True)
+    # Board talk's voice through Hermes' public tool dispatch (the setting board_talk_tts_via_sdk, plugin.yaml
+    # config_schema, default off; read by the panel's routes in the same process, dashboard/plugin_api._sdk_dispatch).
+    # Its own store, set even when the Deep Check is off: the Deep Check's (core.set_deep_ctx) stays empty then, so no
+    # X search can start through it.
+    core.talk_tts_ctx = {"dispatch": None, "get_config": None}
+    try:
+        dispatch, get_config = getattr(ctx, "dispatch_tool", None), getattr(ctx, "get_config", None)
+        core.talk_tts_ctx = {"dispatch": dispatch if callable(dispatch) else None,
+                             "get_config": get_config if callable(get_config) else None}
+    except Exception:
+        logger.debug("piquesignal board talk voice context skipped", exc_info=True)
     fn = getattr(ctx, "session_surface", None)
     _surface_fn["fn"] = fn if callable(fn) else None
     cf = getattr(ctx, "current_cron_execution", None)

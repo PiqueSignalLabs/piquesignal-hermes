@@ -13,7 +13,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))          # gen_engine.py sits next to this file (also under "py -I build.py")
 from gen_engine import skeleton_problems, strip_js_comments  # noqa: E402
 OUT = HERE.parent / "piquesignal" / "desktop" / "plugin.js"
-HEADER = """// PiqueSignal for Hermes Desktop. Plain ESM, no build tooling needed to run; imports ONLY 'react' and '@hermes/plugin-sdk'.
+HEADER = """// Pique Signal for Hermes Desktop. Plain ESM, no build tooling needed to run; imports ONLY 'react' and '@hermes/plugin-sdk'.
 // This file is ASSEMBLED by plugin/gen/build.py from: the website board engines (generated from the after-go-live website
 // pages by gen_engine.py + gen_css.py), the pinned TradingView Lightweight Charts library (in its own scope) and the
 // hand-written plugin part (plugin.src.js, shipped here without its comments). Edit those, then rebuild.

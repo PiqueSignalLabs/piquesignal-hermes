@@ -1,4 +1,4 @@
-// PiqueSignal has no web-dashboard UI: this manifest exists to mount plugin_api.py, which the Desktop pane calls
+// Pique Signal has no web-dashboard UI: this manifest exists to mount plugin_api.py, which the Desktop pane calls
 // through ctx.rest. The dashboard still loads the entry, so register an empty page.
 (function () {
   var plugins = window.__HERMES_PLUGINS__

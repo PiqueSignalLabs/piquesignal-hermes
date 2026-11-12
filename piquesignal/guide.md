@@ -1,16 +1,16 @@
-# How PiqueSignal works
+# How Pique Signal works
 
-Hermes reads this guide to answer "how does PiqueSignal work?". The Hermes plugin is section 9; the rest covers the website, plans and APIs.
+Hermes reads this guide to answer "how does Pique Signal work?". The Hermes plugin is section 9; the rest covers the website, plans and APIs.
 
-## 1. What PiqueSignal is
-PiqueSignal finds new Solana memecoins worth watching and puts them on one board. It warns you about junk, and shows how strong each coin has gotten.
+## 1. What Pique Signal is
+Pique Signal finds new Solana memecoins worth watching and puts them on one board. It warns you about junk, and shows how strong each coin has gotten.
 - It is for research only. It is not financial advice.
 - Memecoins are very risky. You can lose all your money. You make your own choices.
 - We run rug and safety checks before we call a coin. Risky coins are removed or get a warning tag. But no check catches every rug. A "Rug risk" label is not a guarantee or an audit.
 - Start on the free board. You do not need an account.
-- PiqueSignal is run by Top Tier Strategies LLC. Contact: piquesignal@gmail.com
+- Contact Pique Signal: piquesignal@gmail.com
 
-## 2. All the ways to use PiqueSignal
+## 2. All the ways to use Pique Signal
 | Way | Who can use it | Where to start |
 |---|---|---|
 | Free board (website) | Everyone, no account | piquesignal.xyz/free |
@@ -20,7 +20,7 @@ PiqueSignal finds new Solana memecoins worth watching and puts them on one board
 | Track record | Everyone, free | /track-record |
 | Account page | $49 Gated or $99 Builder | "Account" at the top of the page |
 | In-app bell alerts | $49 Gated or $99 Builder | Account → Alerts tab |
-| Hermes plugin | Hermes Desktop users (free board without a key; gated board with your member key) | "PiqueSignal" in the Hermes sidebar |
+| Hermes plugin | Hermes Desktop users (free board without a key; gated board with your member key) | "Pique Signal" in the Hermes sidebar |
 | Your AI app (MCP): Claude, ChatGPT, Gemini, Claude Code and others | $49 Gated or $99 Builder (needs your API key) | Account → API key → Connect your AI |
 | Grok | Any X account, free (blue check gets a 7-day trial) | Grok connector settings |
 | API key: pull the board, website webhooks | $49 Gated or $99 Builder | Account → API key |
@@ -51,7 +51,7 @@ PiqueSignal finds new Solana memecoins worth watching and puts them on one board
 - **/api-docs**, **/ai-agents**, **/grok:** pages for agents and developers.
 
 ### 2.2 Phones
-- PiqueSignal works on a phone. Phones get the real pages.
+- Pique Signal works on a phone. Phones get the real pages.
 - No wallet in your phone browser? Tap Connect or Sign in. If no wallet is found, you see 3 links: **Phantom**, **Solflare** and **Backpack**. Tap one. The page opens inside that wallet app. Sign in there.
 
 ## 3. Plans and prices
@@ -213,7 +213,7 @@ x402 is an open payment standard. An AI agent pays a small amount of USDC on Sol
 - **Pages:** /ai, /ai-agents and /api-docs.
 
 ## 5. Your AI app (MCP)
-Connect PiqueSignal to your AI app and ask about the board in plain words.
+Connect Pique Signal to your AI app and ask about the board in plain words.
 - **Works with:** Claude, ChatGPT, Gemini, Claude Code, and any app that supports MCP.
 - **Who:** $49 Gated or $99 Builder. You sign in with your API key.
 - **Connection address:** `https://piquesignal.xyz/mcp`
@@ -260,7 +260,7 @@ Set it up (about a minute):
 1. In Grok, open your custom connector settings ("add your own connector").
 2. Add this address: `https://grok.piquesignal.xyz/mcp`
 3. Sign in with X when Grok asks.
-4. Ask: "show me the PiqueSignal board" or "what's moving".
+4. Ask: "show me the Pique Signal board" or "what's moving".
 
 Good to know:
 - Just got X Premium? Reconnect the connector once to get your trial.
@@ -336,46 +336,45 @@ Two ways:
 - **Public Telegram (t.me/pique_signal)** is our community channel. It is not your personal alert feed.
 
 ## 9. The Hermes plugin
-The PiqueSignal board inside Hermes Desktop. The plugin never trades and never touches your wallet. Nothing is bought inside Hermes.
+The Pique Signal board inside Hermes Desktop. The plugin never trades and never touches your wallet. Nothing is bought inside Hermes.
 
 ### 9.0 Install
 1. Run `hermes plugins install piquesignal` (once it is in the catalog).
 2. Run `hermes plugins enable piquesignal`.
 3. Restart Hermes.
-4. Turn on the Desktop part: Capabilities → Plugins (or Ctrl+K → Desktop plugins) → PiqueSignal.
-5. Click **PiqueSignal** in the sidebar. A member key is optional (see 9.2).
+4. Turn on the Desktop part: Capabilities → Plugins (or Ctrl+K → Desktop plugins) → Pique Signal.
+5. Click **Pique Signal** in the sidebar. A member key is optional (see 9.2).
 
 ### 9.1 Open the board
-1. Click **PiqueSignal** in the Hermes sidebar. The full computer board opens.
+1. Click **Pique Signal** in the Hermes sidebar. The full computer board opens.
 2. Without a key you see the free board (see 9.2 for the member board).
 3. For the board beside your chat (a side pane; it shows the website's mobile view when you make the pane narrow), use the palette command below.
-- Command palette: "PiqueSignal: open the board", "PiqueSignal: open the board beside the chat", "PiqueSignal: preview the pop-ups", "PiqueSignal: stop sharing the picked coin with Hermes".
-- The status bar shows "PiqueSignal" and the number of coins. Click it to open the board.
+- Command palette: "Pique Signal: open the board", "Pique Signal: open the board beside the chat", "Pique Signal: preview the pop-ups", "Pique Signal: stop sharing the picked coin with Hermes".
+- The status bar shows "Pique Signal" and the number of coins. Click it to open the board.
 
 ### 9.2 Free board or gated board
 - Without a key, you see the free board. It is the same as piquesignal.xyz/free: at least 10 minutes behind live (up to 60 minutes for strong coins).
 - **Member key** = your website API key. It unlocks the gated board in Hermes.
 - **Unlock with your key** (the easy way): open the Hermes box (**Open ▾**); in the Ask part press **Unlock with your key** (on the gated board without a key it is also under the message). 3 short steps:
   1. **Get my key** opens your Account page in the browser: open the **API key** tab and copy your key (you need a $49 or $99 plan).
-  2. **Open the key box** opens Hermes Settings at PiqueSignal: paste your key in **PiqueSignal member key** and press **Save**. Hermes keeps it as its own secret; the board never displays or stores it.
-  3. Come back and press **Check my key**. It says "Key works - gated board unlocked", or in plain words what is wrong (no key yet, the key does not look right, PiqueSignal refused it).
-- The second way: paste it yourself in Hermes Settings → Plugins → PiqueSignal → **PiqueSignal member key**.
+  2. **Open the key box** opens Hermes Settings at Pique Signal: paste your key in **Pique Signal member key** and press **Save**. Hermes keeps it as its own secret; the board never displays or stores it.
+  3. Come back and press **Check my key**. It says "Key works - gated board unlocked", or in plain words what is wrong (no key yet, the key does not look right, Pique Signal refused it).
+- The second way: paste it yourself in Hermes Settings → Plugins → Pique Signal → **Pique Signal member key**.
 - To change the key, paste the new one the same way. The board cannot remove a key for you (it never touches the key).
 - No key yet? The lock icon at the top of the free board (in the mobile view, **Unlock** in the menu) and **Unlock the live board** on the gated board without a key open /unlock in your browser.
 - With a member key, Hermes reads the member board using your key's daily calls (also Early Edge, Featured Callers, the 24 h history for Rewind and the Missed tiles you click; see 9.14). All together they use at most 60% of your daily limit, and the member board is read never more than once a minute. This is counted per running Hermes program: a second one with the same key counts its own, so two together can use more.
 - If your key is refused, Hermes waits about 15 minutes (plus a little random extra) before it tries again, and the member Rewind history and the saved coin pictures are erased. If only Early Edge or Featured Callers is refused for your key, only that part is hidden, and it is asked again about 15 minutes (plus a little random extra) later.
 
 ### 9.3 The Hermes box (above the board)
-- The box starts **closed**: one line with **Board talk ▶**, **Voice chat**, **Rewind: Live** and **Open ▾**. The full page and the side pane each remember if you left the box open or closed.
+- The box starts **closed**: one line with **Board talk ▶**, **Rewind: Live** and **Open ▾**. The full page and the side pane each remember if you left the box open or closed.
 - **Board talk ▶:** two hosts talk through your board out loud (see 9.12). When a Board talk is ready, it reads **Play ▶**.
-- **Voice chat:** talk with Hermes by voice (see 9.13). While the voice chat is on, it reads **End voice chat**.
 - **Rewind: Live:** shows a short Rewind row under the line: the slider, the time and **Live**. Press **Rewind** again, **Live** or Esc to hide it (**Live** also goes back to now). It does not open the box. When you look at an earlier board, the button shows that time.
 - **Open ▾** shows 4 parts. **Close ▴** (or Esc) folds them again.
-  - **Ask:** **Ask about <coin>** (click a coin first; Hermes answers about "this one"), **How it works** (asks Hermes how PiqueSignal works), **Morning brief** (asks Hermes for a quick summary of the board now; this is not the daily Cron job in 9.9) and **Voice chat with Hermes**.
+  - **Ask:** **Ask about <coin>** (click a coin first; Hermes answers about "this one"), **How it works** (asks Hermes how Pique Signal works) and **Morning brief** (asks Hermes for a quick summary of the board now; this is not the daily Cron job in 9.9).
   - **Listen:** **Board talk ▶**, **Resume** and **Replay last** when they apply. One Board talk is made at a time.
   - **Rewind:** the slider (see 9.8) and **Back to live**.
   - **Alerts:** **Saved coins** on/off (pop-ups when a coin you saved changes) and **New calls** on/off (the same switch as the bell and Settings).
-- One short line under the box shows news: a Board talk message first, then Voice chat, then Resume, then "since you looked away".
+- One short line under the box shows news: a Board talk message first, then Resume, then "since you looked away".
 - The buttons that ask Hermes something try to send the question for you. Sometimes the question is only put in the chat box: then press Enter to send it. If no chat is open, open a chat first.
 
 ### 9.4 Point and Talk
@@ -392,7 +391,7 @@ The PiqueSignal board inside Hermes Desktop. The plugin never trades and never t
 - Show coins: Hermes can light up coin cards one by one, or open a coin's pop-up.
 - Filter: "Show me only DEX paid." Hermes sets the filters and search for you. "Clear the filters" turns them off.
 - Ask what a tag means: "What does Fake Volume mean?"
-- Answer how PiqueSignal works (from this guide).
+- Answer how Pique Signal works (from this guide).
 - **Contract addresses in replies:** replies may be read aloud, so when you ask for a coin's contract address Hermes writes it only inside a fenced ``` code block (shown and copyable, never read aloud), never in normal text or inline code. The same rule holds in every chat (Desktop, Telegram, Discord ...).
 
 ### 9.6 Coin cards in chat
@@ -411,21 +410,21 @@ The PiqueSignal board inside Hermes Desktop. The plugin never trades and never t
 1. Press **Rewind: Live** in the Hermes box (Rewind is on by default; it can be switched off in Settings).
 2. Drag the slider back to an earlier time.
 3. Press **Live** to go back to now (Esc only hides the Rewind row).
-- **Rewind:** slide back to see the board as it was. It saves the board every 10 minutes while the PiqueSignal board is open, for up to one day, only on this computer. It is never uploaded. Rewind is on by default and can be switched off in Settings. The gated board needs your member key. **Back to live** returns to now.
-- **The last 24 hours from PiqueSignal:** when your newest Rewind snapshot of that board is more than 15 minutes old (or there is none, for example Hermes was closed), Hermes asks piquesignal.xyz for that board's last 24 hours (one board every 10 minutes) and adds it to Rewind. It asks at most once every 20 minutes per board, and waits a random 0 to 2 minutes after Hermes starts. Your own Rewind snapshots win: a server board within 5 minutes of one of yours is skipped. The free board's history has only the coins that are on the free board now, so coins that came and went while you were away are not in it. The member board's history needs your member key and is kept only for that same key. If PiqueSignal answers that a board's 24 h history does not exist, Hermes does not ask for it again until Hermes restarts.
+- **Rewind:** slide back to see the board as it was. It saves the board every 10 minutes while the Pique Signal board is open, for up to one day, only on this computer. It is never uploaded. Rewind is on by default and can be switched off in Settings. The gated board needs your member key. **Back to live** returns to now.
+- **The last 24 hours from Pique Signal:** when your newest Rewind snapshot of that board is more than 15 minutes old (or there is none, for example Hermes was closed), Hermes asks piquesignal.xyz for that board's last 24 hours (one board every 10 minutes) and adds it to Rewind. It asks at most once every 20 minutes per board, and waits a random 0 to 2 minutes after Hermes starts. Your own Rewind snapshots win: a server board within 5 minutes of one of yours is skipped. The free board's history has only the coins that are on the free board now, so coins that came and went while you were away are not in it. The member board's history needs your member key and is kept only for that same key. If Pique Signal answers that a board's 24 h history does not exist, Hermes does not ask for it again until Hermes restarts.
 - **While you were away:** the first time the history fills Rewind, one line sums up what changed (if anything did), and, if saved-coin pop-ups are on, one pop-up lists your saved coins that changed.
 - **Since you looked away:** after 2 minutes or more away, if anything changed, a line shows what changed. **Ask Hermes** gives a short catch-up.
 
 ### 9.9 Morning brief (daily)
 1. Open the Hermes **Cron** page.
-2. Pick **PiqueSignal morning brief**.
+2. Pick **Pique Signal morning brief**.
 3. Set the time, the board and where it goes, then save it.
 - Pick the time (default 08:00), which board (auto, free or gated), and where it goes (**Where to deliver?**: origin = this chat, local = save only).
 - "auto" = your member board if your member key is set, else the free board. If the brief goes to a chat app (not a Hermes chat), it uses the free board.
 - It gives the newest calls, the biggest moves and any warning tags. It never gives hit rates.
 - The morning brief is a normal Hermes cron job. It keeps running if you turn off the plugin. To stop it, delete it on the Cron page.
 
-### 9.10 Settings (Settings → Plugins → PiqueSignal)
+### 9.10 Settings (Settings → Plugins → Pique Signal)
 6 switches:
 1. Pop-ups for new calls (on by default).
 2. Pop-ups when a saved coin changes (on by default).
@@ -433,22 +432,22 @@ The PiqueSignal board inside Hermes Desktop. The plugin never trades and never t
 4. Rewind: keep the board history on this computer (up to a day; never uploaded; on by default).
 5. Morning Board talk: get one ready each morning while Hermes is open (it never plays by itself), with its time (off by default).
 6. Board talk: short music stings between segments (on by default).
-Your member key also goes here.
+Your member key also goes here, with two more settings: **Let Hermes use my member board in chats** (on by default; see 9.11) and **Speak Board talk through Hermes' tool call** (off by default; see 9.12).
 
 ### 9.11 Privacy in Hermes
 - Your AI model gets board facts only: the coin's name, symbol, contract, numbers and tags. With a member key, that includes the Clear Eyes step, the Clear Eyes note and the Real Crowd line, so those go to your AI model's provider too.
-- Hermes can use the PiqueSignal tools in any chat it runs, also in chat apps like Telegram or Discord, and the answer goes to that chat. The member board is given only in Hermes Desktop, terminal and CLI chats (and a scheduled morning brief kept in Hermes; a brief with extra words or settings gets the free board; a cron job that reads the brief's output sends it where that job delivers). Chat apps get the free board. A chat that another agent (Hermes Bot Mode), a chat app or a kanban card wrote in, a chat that sent a message to another agent, and the Bot Chat get the free board from then on, also after Hermes restarts; open a new chat for the member board. Hermes' own notices, such as a cron job's result, get the free board for that one turn. Your own chats keep it after a restart and through pictures, voice, model switches and your own background jobs. A chat also gets the free board from then on when you paste another agent's Bot Mode message or a kanban notice into it. Text another plugin puts into a chat counts as yours when Hermes does not label it; when Hermes labels it, that chat gets the free board from then on. Member facts already shown in a chat stay in its history: start a new chat before Hermes messages another agent. To keep the member board out of every chat, turn off "Let Hermes use my member board in chats" in Settings > Plugins > PiqueSignal (do this if a chat of yours is linked to a Telegram or Discord group); turning it back on takes effect after Hermes restarts. The board page itself always keeps your member board. If you use Bot Mode, agents you let message your Hermes can use its tools: only add agents you trust.
+- Hermes can use the Pique Signal tools in any chat it runs, also in chat apps like Telegram or Discord, and the answer goes to that chat. The member board is given only in Hermes Desktop, terminal and CLI chats (and a scheduled morning brief kept in Hermes; a brief with extra words or settings gets the free board; a cron job that reads the brief's output sends it where that job delivers). Chat apps get the free board. A chat that another agent (Hermes Bot Mode), a chat app or a kanban card wrote in, a chat that sent a message to another agent, and the Bot Chat get the free board from then on, also after Hermes restarts; open a new chat for the member board. Hermes' own notices, such as a cron job's result, get the free board for that one turn. Your own chats keep it after a restart and through pictures, voice, model switches and your own background jobs. A chat also gets the free board from then on when you paste another agent's Bot Mode message or a kanban notice into it. Text another plugin puts into a chat counts as yours when Hermes does not label it; when Hermes labels it, that chat gets the free board from then on. Member facts already shown in a chat stay in its history: start a new chat before Hermes messages another agent. To keep the member board out of every chat, turn off "Let Hermes use my member board in chats" in Settings > Plugins > Pique Signal (do this if a chat of yours is linked to a Telegram or Discord group); turning it back on takes effect after Hermes restarts. The board page itself always keeps your member board. If you use Bot Mode, agents you let message your Hermes can use its tools: only add agents you trust.
 - For pop-ups, Hermes saves the coin's picture from Dexscreener on this computer (up to 40). After your member key is removed, changed or refused, they are erased the next time the board checks the key.
 - Hermes' plugin storage also keeps your Early Edge panel choices.
 - No tracking. The website's analytics are not in the plugin.
 - Links open in your browser, not inside Hermes.
-- Switching Rewind off erases its history (also the 24 h history it got from PiqueSignal).
+- Switching Rewind off erases its history (also the 24 h history it got from Pique Signal).
 - The Missed strip, Free Pick, banners, Featured Callers and the 24 h history are shown on the board only. Hermes' tools do not read them. Missed and banner pictures and Missed reveals are kept in memory only (gone when Hermes stops).
 - Banners send no view or click counts. A banner link opens in your browser.
-- Voice chat sends nothing to PiqueSignal. Your voice goes only through the Hermes voice chat (see 9.13).
+- Pique Signal never opens the mic and never records. Talking to Hermes by voice is Hermes' own feature (see 9.13).
 - Whenever Deep Check runs (button, chat, or a chat app), this PC sends the coin's public contract address to api.dexscreener.com; that site sees your IP address; no key, no other data. The X check sends the same contract address to xAI (Grok) through Hermes' own x_search. Hermes' x_search uses your xAI API key if one is set in Hermes (billed by xAI per search), otherwise your Grok sign-in. On the member board this lets those services see which coin was checked. Deep Check uses your own AI model: the helpers get a run id, the part name and the contract address, and read back that part's fixed line (on a member check, the member lines too; Hermes may run helpers on the model set for delegation). Dexscreener's answer and the X posts' text never reach it.
 - The last Deep Check per coin (up to 20 coins, 24 h) is kept in the Desktop data folder (deepcheck-free.json, deepcheck-gated.json): each checked coin's contract address and ticker, the card's lines, numbers and times, and for On X the account names, post times and public post ids (also from your earlier checks of that coin, so the timeline continues). The member file is tagged with your key's one-way id (never the key); the member file is erased when the key is removed, changed or refused; nothing is uploaded.
-- The price chart (the Chart button in a coin pop-up or in the Deep Check card) loads only when you open it or switch its time frame. It sends the coin's contract address to api.dexscreener.com (to find the pair, the same read as Deep Check) and then only that pair's pool address to api.geckoterminal.com; those sites see your IP address; no key, no other data. On the member board this lets them see which coin's chart was opened. The candles are kept in memory for a minute only and never reach your AI model. While a chart is open and visible, it asks GeckoTerminal for that pool's latest trades at most every 10 seconds; it pauses when hidden and stops when closed or after 15 minutes without a click or key press in the chart, and 20 minutes after the chart last loaded (a click resumes it: the chart loads again first) (the pool address only; the trades stay in memory and never reach your AI model).
+- The price chart (the Chart button in a coin pop-up or in the Deep Check card) loads only when you open it or switch its time frame. It sends the coin's contract address to api.dexscreener.com (to find the pair, the same read as Deep Check) and then that pair's pool address and the coin's contract address (both public) to api.geckoterminal.com; those sites see your IP address; no key, no other data. On the member board this lets them see which coin's chart was opened. The candles are kept in memory for a minute only and never reach your AI model. While a chart is open and visible, it asks GeckoTerminal for that pool's latest trades at most every 10 seconds; it pauses when hidden and stops when closed or after 15 minutes without a click or key press in the chart, and 20 minutes after the chart last loaded (a click resumes it: the chart loads again first) (the pool address only; the trades stay in memory and never reach your AI model).
 - The Hermes box remembers only whether it is open or closed, on this computer. Hermes' plugin storage also keeps the result of the last voice test and the day of the last morning Board talk try.
 
 ### 9.12 Board talk
@@ -462,31 +461,16 @@ Your member key also goes here.
 - **More and Ask:** Board talk pauses and the coin on air goes to Hermes. **More** asks what the board says about it now and what changed. **Ask** asks about this one. Hermes answers in the chat.
 - **Resume:** after **Stop** (or a pause of 10 minutes), **Resume** goes on from the coin where you stopped. It plays the same Board talk again, so it works only on the same board (on the member board, with the same member key) and while that Board talk is still kept (up to 6 hours; a new Board talk replaces it). If Resume cannot go on, it says why.
 - **One at a time:** only one Board talk is made at a time (press again while one is being made and it says so; wait a moment, then try again). It runs on your own AI model and voice, so each new Board talk uses your own credits. **Replay** and **Resume** ask your AI model nothing.
-- **Voice chat and Board talk:** while the Hermes voice chat is on, Board talk cannot start, resume or replay: the mic would hear the hosts. The buttons read **In voice chat**. Press **End voice chat** first.
 - **Morning Board talk:** off by default. Turn it on in Settings and pick a time. It gets one ready while Hermes is open. It never plays by itself: you press **Play**.
-- **Voices:** two voices only with the Edge voice in Hermes settings (Settings → Voice). Any other voice = one voice.
+- **Voices:** two voices only with the Edge voice in Hermes settings (Settings → Voice). Any other voice = one voice, through Hermes' own speech tool. The setting **Speak Board talk through Hermes' tool call** (off by default) has Hermes run that tool through its public tool call instead, from the next line; if Board talk stops speaking, turn it off.
 - **Numbers:** the board's own values. The "earlier" sentences (holders or status earlier) need the board open for about 30 minutes after Hermes starts.
 - **What is sent:** to your own AI model, for the coins it talks about (up to 8): the coin tickers, tags, times on the board, which coins you saved, which part of the Board talk each coin is in (biggest movers, new arrivals or your coins) and which board (free or member), what changed, and the board's own numbers (change since flagged, market cap now and when flagged, holders and earlier holder counts), and the board's counts (coins on the board, new calls, coins that left the board, and the minutes since you looked away or since the earlier board). On the member board also the status words with earlier steps and the Real Crowd real and shown counts. To your voice service: the words to speak, with those numbers. No coin addresses, scores, wallets or keys are sent. Back, Skip and Resume ask your AI model nothing. Each spoken line passes briefly through a temporary file that is deleted as soon as the line is read (a crash can leave one in the system temp folder); the voice already made for this Board talk is then kept in memory only and is gone when it stops.
 - Research only, not advice.
 
-### 9.13 Voice chat with Hermes
-1. Press **Voice chat** in the Hermes box.
-2. Speak, for example "What is new on my board?"
-3. Press **End voice chat** when you are done.
-- **What it is:** press **Voice chat** (or **Voice chat with Hermes** in the Ask part). It turns on the Hermes voice chat in your chat box. Just speak, for example "What is new on my board?" Hermes answers in the chat and can light up coins on the board.
-- On the computer, Voice chat opens the chat, and the board moves to the side pane next to the chat.
-- **End voice chat** turns the voice chat off. You can also press Ctrl+Alt+V or the mic button in the chat box.
-- If Board talk is playing, it pauses. It never plays again by itself.
-- **Where your voice goes:** Voice chat only turns on the Hermes voice chat. PiqueSignal never opens the mic, never records and never reads what you say or type. Your voice is turned into text by the speech-to-text set in Hermes (Settings → Voice, Speech to text). If no provider is picked there, Hermes picks one itself, and that may be an online service. To keep your voice on this computer, pick the local speech-to-text there (the first use may download a speech model). If you picked a live voice model in Hermes, your voice goes to that service, so for GPT-Live it goes to OpenAI, paid with your own OpenAI key. What you say becomes a normal chat message to your own AI model. PiqueSignal gets nothing new.
-- **Hear the answers:** to hear any answer: hover it in the chat and press the speaker. Or turn on **Read replies aloud** in the chat box voice controls (hover the mic button): then Hermes reads every answer. Spoken answers use the voice set in Hermes (Settings → Voice).
-- **If the mic is blocked:** if voice chat did not start, press **Mic blocked?**. The box then says "Hermes could not use your mic." Windows is most likely blocking it. Fix it once:
-  1. Open Windows Settings.
-  2. Go to Privacy & security, then Microphone.
-  3. Turn on Microphone access and Let apps access your microphone.
-  4. In the list, turn on Hermes Agent.
-  5. Come back here and press Try again.
-- You can always type in the chat instead (**Type instead**).
-- **If the voice chat did not start:** open a chat, then press Ctrl+Alt+V or the mic button in the chat box. **Mic blocked?** shows the steps above.
+### 9.13 Talking to Hermes by voice
+- Pique Signal has no voice chat button of its own. To ask about your board by voice, use Hermes' own mic button in the chat box or press Ctrl+Alt+V. Pause Board talk first: the mic may hear the hosts.
+- **Hear the answers:** hover an answer in the chat and press the speaker, or turn on **Read replies aloud** in the chat box voice controls (hover the mic button). Spoken answers use the voice set in Hermes (Settings → Voice).
+- Your voice is handled by Hermes only (Settings → Voice). Pique Signal never opens the mic and never records.
 
 ### 9.14 Missed strip, Free Pick, banners and Featured Callers
 1. Free board: the Missed strip, the Free Pick and the banners (marked "Ad") are part of the board.
@@ -496,7 +480,7 @@ Your member key also goes here.
 - **Free Pick** (free board): the free board's live pick with its countdown, the same as on the website. When there is no live pick, it says "No live pick right now" with a countdown to the next one.
 - **Banners** (free board): banners marked "Ad" above the coins, changing every 4 seconds. A click opens the banner link in your browser. No view or click is counted.
 - **Featured Callers** (member board, member key): the website's "Featured Callers" button (computer) or "Featured" in the mobile view's menu (side pane) opens the callers and their newest calls inside Hermes. The button shows only when there are callers (with none, "Featured" in the mobile view's menu (side pane) opens the website page in your browser). Call notes are plain text (no links inside them). Click a call to see its details: **Copy** (the contract), **Dexscreener**, **Solscan** and **pump.fun** (open in your browser) and **Open on board** (that coin on the member board). A caller with a valid Telegram channel name has a **Telegram** button that opens the channel in your browser.
-- **What is sent:** these parts are read from piquesignal.xyz by the plugin's backend only (fixed addresses, no query string). Missed, Free Pick, banners and their pictures need no key, and your key is never sent with them. Featured Callers, the member 24 h history and Missed reveals use your member key and count toward your daily calls. Missed, Free Pick and banners are asked at most every 30 seconds (banners every 5 minutes) while the free board is open; Featured Callers at most every 15 minutes while the member board is open. Each part waits a random 0 to 2 minutes after Hermes starts (not Missed reveals and pictures). If PiqueSignal refuses a part, Hermes stops asking it for about 15 minutes (plus a little random extra) and hides it. If PiqueSignal is busy, the last good answer stays.
+- **What is sent:** these parts are read from piquesignal.xyz by the plugin's backend only (fixed addresses, no query string). Missed, Free Pick, banners and their pictures need no key, and your key is never sent with them. Featured Callers, the member 24 h history and Missed reveals use your member key and count toward your daily calls. Missed, Free Pick and banners are asked at most every 30 seconds (banners every 5 minutes) while the free board is open; Featured Callers at most every 15 minutes while the member board is open. Each part waits a random 0 to 2 minutes after Hermes starts (not Missed reveals and pictures). If Pique Signal refuses a part, Hermes stops asking it for about 15 minutes (plus a little random extra) and hides it. If Pique Signal is busy, the last good answer stays.
 - **What is stored:** nothing new on disk except the 24 h history inside Rewind (see 9.8). Missed and banner pictures and Missed reveals are kept in memory only.
 - Hermes' tools never read these parts: they are shown on the board only.
 
@@ -508,10 +492,10 @@ Your member key also goes here.
 - **What happens:** Hermes runs the checks of that one coin with its own helpers (or one by one in the chat), on your own AI model (it uses your own model's credits; Hermes may run helpers on the model set for delegation). A blue result card opens on the board and fills in line by line. You can move it and change its size, and the chat stays usable.
 - **The card:** the coin, a count line (for example "4 green · 2 red · 1 unknown") and one checked-at time. Red lines first, then green, then unknown. Tap a line to see its numbers, where each one comes from ("Your board", "Dexscreener (live)" or "X via Grok") and its own time. There is no verdict and no advice: each line says only what the board or the live data shows.
 - **Free board:** Fake Volume tag, what changed since it was flagged, the live numbers from Dexscreener next to the board's (the free board is at least 10 minutes behind, so the line says how old the board is), and On X. A locked line names what members also get. The card's **Unlock** button opens the 3 key steps in the Hermes box (see 9.2), not the website.
-- **Live numbers:** taken from the coin's pair with the most trading in the last hour (its exchange is named in the details). When Dexscreener's pairs disagree (prices more than 5 times apart, or that pair had very little trading in the last hour), the line says "Live price unclear: Dexscreener pairs disagree" (grey) and shows no number.
+- **Live numbers:** taken from the coin's pair with the most trading in the last hour (its exchange is named in the details). When Dexscreener's pairs disagree (prices more than 5 times apart, that pair had very little trading in the last hour, or a dead pair traded more than it in the last hour while that pair holds under a thousand dollars of liquidity), the line says "Live price unclear: Dexscreener pairs disagree" (grey) and shows no number. A dead pair (under a hundred dollars of liquidity, or no liquidity reported and no trading in the last 5 minutes) is never used while a live pair exists; its price is left out of the 5-times price check only when the pair used clearly took over: at least a thousand dollars of liquidity and at least 3 times that pair's trading over both the last 24 hours and the last hour.
 - **Member board:** the same plus Clear Eyes and Real Crowd.
 - **No Fake Volume tag** is shown as unknown (grey), never as green: the board only ever adds the tag.
-- **On X:** the X posts Grok cites for the coin's contract address in the last two days (up to 30), with the account names and post times. The line counts the last day, for example "On X: 10 posts from 7 accounts in the last day" (On X counts the posts Grok cites, up to 30; shown as 30+ when it hits that cap); its details add how many accounts posted more than once ("3 accounts posted more than once") and, when 3 or more posts came close together, the biggest burst ("6 posts within 10 minutes", the most posts in any 10 minutes). These come only from the post links' account names and times. The line is grey (unknown): posts found say nothing on their own about the coin. An hourly timeline shows when the posts came; two pickers compare the last 1-24 h with the hours before (for example "4 posts vs 1 post"), from the saved post times (no new search). Hermes' x_search uses your xAI API key if one is set in Hermes (billed by xAI per search), otherwise your Grok sign-in; without either, the line says "X check needs a Grok sign-in in Hermes" (or "X check not available"). It can take about a minute; the other lines fill in first. **Refresh X** runs only On X again. One X search runs at a time: a new X check says "X check already running" until the earlier x_search call has really ended, which can take up to Hermes' own x_search time limit for each of its tries (about 9 minutes with Hermes' defaults; after 15 minutes the next X check starts anyway).
+- **On X:** the X posts Grok cites for the coin's contract address in the last two days (the search asks for up to 15 of the most recent, so it stays quick), with the account names and post times. The line counts the last day, for example "On X: 10 posts from 7 accounts in the last day" (when Grok cites 15 or more posts it says "N+ posts (only the most recent posts were read)", for example "15+ posts"); its details add how many accounts posted more than once ("3 accounts posted more than once") and, when 3 or more posts came close together, the biggest burst ("6 posts within 10 minutes", the most posts in any 10 minutes). These come only from the post links' account names and times. The line is grey (unknown): posts found say nothing on their own about the coin. An hourly timeline shows when the posts came; two pickers compare the last 1-24 h with the hours before (for example "4 posts vs 1 post"), from the saved post times (no new search); when the newest X check hit that 15-post limit the compare is left out, since only the most recent posts come back and earlier hours could look quieter than they were. Hermes' x_search uses your xAI API key if one is set in Hermes (billed by xAI per search), otherwise your Grok sign-in; without either, the line says "X check needs a Grok sign-in in Hermes" (or "X check not available"). The X search starts as soon as the Deep Check starts; it can take about a minute, and the other lines fill in first. **Refresh X** runs only On X again. One X search runs at a time: a new X check says "X check already running" until the earlier x_search call has really ended, which can take up to Hermes' own x_search time limit for each of its tries (about 9 minutes with Hermes' defaults; after 15 minutes the next X check starts anyway).
 - **Time limits:** a line still open after about 30 seconds says "still checking…"; after about 90 seconds it says "not available, try Re-check". A late On X result still fills in for up to about 150 seconds; after that the plugin stops waiting, drops a later answer and the line says "X check not available".
 - **Saved:** the last Deep Check of each coin (up to 20 coins, 24 h) is kept on this computer. Opening it again shows when it was checked; **Re-check** runs a fresh one and shows what changed since your last check.
 - **In chat:** Hermes answers with a short 2-3 line version. In a chat app (Telegram, Discord ...) Deep Check is the free one and only that short version is sent there; the card is shown only in Hermes Desktop.
@@ -522,10 +506,10 @@ Your member key also goes here.
 2. Pick **5m**, **1h** or **24h**.
 3. Leave it open to see live trades. Close it to stop them.
 - **Where:** the **Chart** button in the coin pop-up or in the Deep Check card. It loads only when you open it or switch its time frame: **5m**, **1h** or **24h** candles (24h candles are whole UTC days and carry their UTC date). The candles are never asked on a timer or in the background (the live trades below run only while the chart is open and visible).
-- **Which pair:** the same pair Deep Check uses for its live numbers (the pair with the most trading in the last hour on Dexscreener); the chart names it (its exchange and a short pool address). When Dexscreener's pairs disagree, or GeckoTerminal's candles end more than 5 times away from that pair's live price, there is no chart ("Live price unclear"). When no pair is found, there is no chart either.
-- **Data:** the candles come from GeckoTerminal's public API, a CoinGecko product ("Powered by GeckoTerminal" is shown on the chart). Only the pair's pool address is sent to GeckoTerminal, with no key. The data belongs to GeckoTerminal; this plugin gives no rights to it.
+- **Which pair:** the same pair Deep Check uses for its live numbers (the pair with the most trading in the last hour on Dexscreener); the chart names it (its exchange and a short pool address). The chart shows whenever Dexscreener lists a SOL or USDC pair for the coin, good or bad: a quiet coin and pairs that disagree get their chart too (Deep Check still says "Live price unclear" when the pairs disagree). There is no chart only when no pair is found. The coin's own price is always drawn, even in a pool listed the other way round.
+- **Data:** the candles come from GeckoTerminal's public API, a CoinGecko product ("Powered by GeckoTerminal" is shown on the chart). Only the pair's pool address and the coin's contract address (both public) are sent to GeckoTerminal, with no key. The data belongs to GeckoTerminal; this plugin gives no rights to it.
 - **Drawing:** TradingView Lightweight Charts™ Copyright (c) TradingView, Inc. (https://www.tradingview.com/), bundled under the Apache License 2.0. Its link opens in your browser.
-- **Live trades:** while a chart is open and visible, it asks GeckoTerminal for that pool's latest trades at most every 10 seconds; it pauses when hidden and stops when closed or after 15 minutes without a click or key press in the chart, and 20 minutes after the chart last loaded (a click resumes it: "Live updates paused - click to resume"; the chart loads again first, as when you open it). New trades update the last candle or start the next one, and the chart shows "Live · updated" with the time. Only the pool address of that chart is sent (no key); only each trade's time, side, price, USD volume and id are kept, in memory. When GeckoTerminal is busy it says "Live updates paused" and waits longer each time (up to 2 minutes). No live trades when the price is unclear.
+- **Live trades:** while a chart is open and visible, it asks GeckoTerminal for that pool's latest trades at most every 10 seconds; it pauses when hidden and stops when closed or after 15 minutes without a click or key press in the chart, and 20 minutes after the chart last loaded (a click resumes it: "Live updates paused - click to resume"; the chart loads again first, as when you open it). New trades update the last candle or start the next one, and the chart shows "Live · updated" with the time. Only the pool address of that chart is sent (no key); only each trade's time, side, price, USD volume and id are kept, in memory. When GeckoTerminal is busy it says "Live updates paused" and waits longer each time (up to 2 minutes). No live trades when there is no chart.
 - **Expand:** opens the same chart as a full page, with the same controls. **Back** returns to the board.
 - **Limits:** the same pair and time frame is asked at most once a minute; when GeckoTerminal is busy, the chart says it is not available and the plugin waits quietly (at most 15 minutes) before asking again.
 - The chart shows past prices only: no verdict and no advice.
@@ -614,10 +598,10 @@ For paid members ($49 Gated or $99 Builder). If you have no plan, it sends you t
 - You must be 18 or older.
 - You may not use it if you are on a sanctions list or in a sanctioned country or region.
 - Not financial advice. You can lose all your money. Past results do not promise future results.
-- PiqueSignal and its operators may hold or trade coins shown on the boards.
+- Pique Signal and its operators may hold or trade coins shown on the boards.
 - Up to 3 API keys at a time.
 - Do not share your sign-in, keys or passes. Do not resell, share or post our API data without permission.
-- You may mention our calls in your own trading notes or posts if you credit PiqueSignal.
+- You may mention our calls in your own trading notes or posts if you credit Pique Signal.
 - No scraping. Use only the ways we offer: API, AI apps (MCP), Grok, x402.
 - Texas law applies. EU and UK consumers keep the protections of their own law.
 - Full rules: /terms
@@ -644,7 +628,7 @@ For paid members ($49 Gated or $99 Builder). If you have no plan, it sends you t
 - **Do I need an account for the free board?** No.
 - **How do I sign in?** Connect your Solana wallet and approve a message. It is not a payment. No password.
 - **How long do I stay signed in?** Up to 90 days, or until you sign out.
-- **Can I share a call on X?** Yes, in your own notes or posts, if you credit PiqueSignal. Do not resell the data.
+- **Can I share a call on X?** Yes, in your own notes or posts, if you credit Pique Signal. Do not resell the data.
 - **Are all rugs removed?** No check catches every rug. Risky coins are removed or get a warning tag. Always check for yourself.
 - **I lost my wallet or want a new one.** Your plan works only with the wallet you paid from. Email piquesignal@gmail.com for help.
 - **Can I pay with a card?** No. USDC or SOL from your Solana wallet.
@@ -660,10 +644,10 @@ For paid members ($49 Gated or $99 Builder). If you have no plan, it sends you t
 - **How do I connect Claude, ChatGPT or Gemini?** Make an API key, add a custom connector with `https://piquesignal.xyz/mcp`, and sign in with your key.
 - **Is Grok free?** Yes. Any X account gets the free board. A blue check gets a 7-day live trial.
 - **Can my AI trade for me?** Only practice trades with fake money, in MCP apps. Never real money.
-- **Can an agent use PiqueSignal without an account?** Yes, with x402: $0.02 per read, $0.50 for an hour pass, or $5.00 for a day pass (the 402 bill shows the final price).
+- **Can an agent use Pique Signal without an account?** Yes, with x402: $0.02 per read, $0.50 for an hour pass, or $5.00 for a day pass (the 402 bill shows the final price).
 - **I lost my API key or pass.** We cannot show it again. Make a new key, or buy a new pass.
 - **Does my agent need SOL for x402?** No. Only USDC.
-- **How do I unlock the gated board in Hermes?** Paste your website API key in Settings → Plugins → PiqueSignal.
+- **How do I unlock the gated board in Hermes?** Paste your website API key in Settings → Plugins → Pique Signal.
 - **Is my Rewind history uploaded?** No. It stays on your computer, up to one day.
 - **Does it work on my phone?** Yes. If your browser has no wallet, open the page in the Phantom, Solflare or Backpack app.
 - **Can I join the affiliate program?** Not yet. It is coming soon.

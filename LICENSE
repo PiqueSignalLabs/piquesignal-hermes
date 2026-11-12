@@ -1,9 +1,9 @@
-PiqueSignal for Hermes — licence
+Pique Signal for Hermes — licence
 
-Copyright (c) 2026 PiqueSignal (piquesignal.xyz). All rights reserved.
+Copyright (c) 2026 Pique Signal (piquesignal.xyz). All rights reserved.
 
-This repository (the "Plugin") and everything in it, including the PiqueSignal website board code, styles and pages
-it carries, belongs to PiqueSignal.
+This repository (the "Plugin") and everything in it, including the Pique Signal website board code, styles and pages
+it carries, belongs to Pique Signal.
 
 Exception - fonts: piquesignal/desktop/plugin.js carries three open-source fonts (Hanken Grotesk, JetBrains Mono and
 Bricolage Grotesque), embedded so the board looks the same as the website. They are NOT covered by this licence. Each
@@ -23,17 +23,17 @@ You may:
   - download, install and use the Plugin unchanged, as a plugin for Hermes Agent / Hermes Desktop, for your own use;
   - read the source to review what it does (for example, as part of a plugin catalog review).
 
-You may not, without written permission from PiqueSignal:
+You may not, without written permission from Pique Signal:
   - copy, modify, adapt, translate or create works based on the Plugin or any part of it;
   - reuse any part of it (including the board code, styles, layout or text) in another product, plugin, website or
     service;
   - redistribute, sell, sublicense or publish the Plugin or any part of it, except installing it from its official
     source;
-  - use the PiqueSignal name or logo, except to refer to this Plugin.
+  - use the Pique Signal name or logo, except to refer to this Plugin.
 
-The PiqueSignal data shown by the Plugin comes from PiqueSignal's servers under PiqueSignal's own terms; this licence
-gives no rights to that data. Member features need your own PiqueSignal plan and key.
+The Pique Signal data shown by the Plugin comes from Pique Signal's servers under Pique Signal's own terms; this licence
+gives no rights to that data. Member features need your own Pique Signal plan and key.
 
 THE PLUGIN IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING FITNESS FOR A PARTICULAR
-PURPOSE. IN NO EVENT SHALL PIQUESIGNAL BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THE
+PURPOSE. IN NO EVENT SHALL PIQUE SIGNAL BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THE
 PLUGIN. Nothing shown by the Plugin is financial advice; on-chain data, for research only.

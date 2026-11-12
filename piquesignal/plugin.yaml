@@ -1,28 +1,27 @@
 name: piquesignal
-label: PiqueSignal
+label: 'Pique Signal'
 kind: standalone
-version: 1.4.0
-author: PiqueSignal
+version: 1.5.0
+author: Pique Signal
 license: LicenseRef-PiqueSignal AND OFL-1.1 AND Apache-2.0 AND MIT
 description: >
-  PiqueSignal's Solana memecoin board inside Hermes Desktop: watch new coins, see which ones look risky, and press
+  Pique Signal's Solana memecoin board inside Hermes Desktop: watch new coins, see which ones look risky, and press
   Deep Check to have Hermes check any coin for you.
-  The PiqueSignal Solana memecoin board inside Hermes Desktop, looking like piquesignal.xyz: the desktop board as a full
+  The Pique Signal Solana memecoin board inside Hermes Desktop, looking like piquesignal.xyz: the desktop board as a full
   page (sidebar row) and in a side pane next to the chat (the website's mobile view when the pane is narrow), with the same cards, Fake Volume and DEX paid tags, filters,
   search, saved coins and coin pop-up. Free view without a key (at least 10 minutes behind live, up to 60 for strong
-  coins, like the website's free board); your own PiqueSignal member key adds the live member (gated) board with Clear
+  coins, like the website's free board); your own Pique Signal member key adds the live member (gated) board with Clear
   Eyes, Real Crowd, Early Edge and Featured Callers. Deep Check, for a coin on your board
   (a button in every coin pop-up and on Hermes chat coin cards, or typed in a chat): Hermes' own helpers on your own AI
   model fill a red / green / unknown result card about one coin, line by line. Free board: Fake Volume tag, what
   changed, live numbers, On X (e.g. "On X: 10 posts from 7 accounts in the last day", with "3 accounts posted more
-  than once" and, from 3 on, "6 posts within 10 minutes" in its details: counted from the post links only; On X counts the posts Grok
-  cites, up to 30, shown as 30+ when it hits that cap); the member board adds Clear Eyes and Real Crowd; research only. A price chart in the coin pop-up and the Deep Check card
+  than once" and, from 3 on, "6 posts within 10 minutes" in its details: counted from the post links only; the X search asks for up to 15 of the
+  most recent posts, so at 15 or more the line reads "N+ posts (only the most recent posts were read)", e.g. "15+ posts"); the member board adds Clear Eyes and Real Crowd; research only. A price chart in the coin pop-up and the Deep Check card
   (5m / 1h / 24h candles from GeckoTerminal, drawn with TradingView Lightweight Charts; live trades update it while it is
   open and visible; Expand opens it as a full page). Also Point and Talk (click a coin and Hermes knows "this one"; Hermes lights up and opens cards
   and sets the filters while it talks), Ask Hermes in every coin pop-up, Board talk (a short spoken radio-style talk
-  about your board with two hosts and captions, made only when you press Board talk or turn on the morning Board
-  talk; with Back, Pause, Skip, Stop and Resume; More and Ask send the coin on air to your Hermes chat), Voice chat
-  with Hermes (turns on Hermes' own voice chat), Rewind (the board as it was earlier + "since you looked away"; after
+  about your board with two hosts (one voice with a non-Edge voice) and captions, made only when you press Board talk or turn on the morning Board
+  talk; with Back, Pause, Skip, Stop and Resume; More and Ask send the coin on air to your Hermes chat), Rewind (the board as it was earlier + "since you looked away"; after
   a gap the board's last 24 h from piquesignal.xyz fills it in), the website's Missed strip, Free Pick and "Ad"
   banners on the free board, Featured Callers on the member board, answers in the chat about what each tag means, pop-ups for new calls and for
   your saved coins, a morning-brief Cron blueprint and a status-bar count, all in one Hermes box above the board that
@@ -48,17 +47,19 @@ description: >
   contract address to api.dexscreener.com (/token-pairs/v1/solana/<address>: one request per Deep Check, only when you
   ask, never from a schedule, one per message you send; a plain User-Agent, at most 256 KB, 5 s without an answer at
   any network step and 15 s of reading, no redirects, the same coin at most once a minute, a 429 / 503 = a quiet pause
-  of at most 15 min; pairs that disagree = "Live price unclear", no number); that site sees your IP address; no key, no
+  of at most 15 min; pairs that disagree or too little 1 h trading = "Live price unclear", no number); that site sees your IP address; no key, no
   other data. The X
   check sends the same contract address to xAI (Grok) through Hermes' own x_search (one search
-  per Deep Check, in the background; only the cited post links are read; an answer after 150 s is dropped). Hermes' x_search uses your xAI API key if one is set in Hermes
+  per Deep Check, started as soon as the Deep Check starts, in the background; only the cited post links are read; an answer after 150 s is dropped). Hermes' x_search uses your xAI API key if one is set in Hermes
   (billed by xAI per search), otherwise your Grok sign-in. On the
   member board this lets those services see which coin was checked. Opening a price chart (coin pop-up or Deep Check card) or switching
   its time frame (only on your click, never on a timer or in the background) makes the same api.dexscreener.com read
-  to find the pair the live pair rule picks, then sends that pair's pool address only to api.geckoterminal.com
-  (/api/v2/networks/solana/pools/<pool>/ohlcv/, keyless: a plain User-Agent, at most 512 KB, 15 s, no
-  redirects, the same pair and time frame at most once a minute, a 429 / 503 = a quiet pause of at most 15 min; pairs
-  that disagree = no chart and no GeckoTerminal request); that site sees your IP address; no key, no other data; on the
+  to find the pair the live pair rule picks, then sends the pool address and the coin's contract address (both public)
+  to api.geckoterminal.com (/api/v2/networks/solana/pools/<pool>/ohlcv/ with token=<address>, so the coin's own price is
+  drawn; keyless: a plain User-Agent, at most 512 KB, 15 s, no redirects, the same pair, coin and time frame at most once
+  a minute, a 429 / 503 = a quiet pause of at most 15 min); the chart shows whenever Dexscreener lists a SOL or USDC pair for the coin
+  (no pair = no chart and no GeckoTerminal request); Deep Check still says "Live price unclear" when the pairs disagree;
+  that site sees your IP address; no key, no other data; on the
   member board Dexscreener and GeckoTerminal see which coin's chart was opened. The chart shows "Powered by
   GeckoTerminal" (the data comes from GeckoTerminal's public API, a CoinGecko product; the data belongs to
   GeckoTerminal; this plugin gives no rights to it) and is drawn with
@@ -67,7 +68,7 @@ description: >
   after the chart last loaded) and the last trades answer are kept, in memory. Live trades: while a chart is open and visible, it
   asks GeckoTerminal for that pool's latest trades at most every 10 seconds; it pauses when hidden and stops when closed
   or after 15 minutes without a click or key press in the chart, and 20 minutes after the chart last loaded (a click resumes it) (/api/v2/networks/solana/pools/<pool>/trades, no query: only the pool
-  that chart picked, no Dexscreener read, nothing when the price is unclear; the same plain User-Agent, no key,
+  that chart picked, no Dexscreener read, nothing when there is no chart; the same plain User-Agent, no key,
   512 KB, 15 s, no redirects; at most one request every 10 s in all; a 429 / 503 = a wait of 10 s doubling up to
   2 min, any other refusal stops that pool 15 min; only each trade's time, side, price, USD volume and id are kept,
   at most 300, in memory). Deep Check uses your own AI model (Hermes' own
@@ -87,13 +88,12 @@ description: >
   (Flagged, Early, Building, Peak, Faded) with earlier steps and the Real Crowd real and shown counts go to your own
   Hermes AI model (one call per new Board talk) to write the script, and the script's words (with those numbers) go to
   Hermes' own configured text-to-speech provider (by default Microsoft Edge TTS, spoken through the edge_tts library
-  Hermes uses; any other provider through Hermes' internal tools.tts_tool, a private import that may need an update
-  when Hermes changes); a paid model or voice uses your own credits. No coin addresses, scores, wallets or keys are
-  sent. The palette voice test speaks one fixed line (at most 30 a day). Voice chat with Hermes only turns on Hermes' own
-  voice chat; your voice is handled by that voice chat and goes to the speech-to-text set in Hermes (it may be an
-  online service unless you pick a local one; if you picked a live voice model in Hermes, your voice goes to that service,
-  so for GPT-Live it goes to OpenAI, paid with your own OpenAI key), not to PiqueSignal; nothing new is sent by PiqueSignal, and it
-  never opens the mic or records. Board facts go to your own AI model when Hermes uses the tools (on any Hermes
+  Hermes uses; any other provider through Hermes' own text_to_speech tool: with the setting "Speak Board talk through
+  Hermes' tool call" off (the default) through Hermes' internal tools.tts_tool, a private import that may need an
+  update when Hermes changes; on, through Hermes' public tool call instead); a paid model or voice uses your own credits. No coin addresses, scores, wallets or keys are
+  sent. The palette voice test speaks one fixed line (at most 30 a day). Pique Signal has no voice chat of its own (to talk
+  to Hermes by voice, use Hermes' own mic button or Ctrl+Alt+V); nothing new is sent by Pique Signal, and it never opens
+  the mic or records. Board facts go to your own AI model when Hermes uses the tools (on any Hermes
   platform, chat apps like Telegram or Discord included, where the tools give the free view only and the answer goes
   to that chat; member-view facts with a key only in Hermes Desktop, terminal and CLI chats and in a scheduled morning brief
   kept in Hermes, and only while the setting "Let Hermes use my member board in chats" is on; a chat that another agent
@@ -133,10 +133,15 @@ config_schema:
   api_key:
     type: secret
     env: PIQUESIGNAL_API_KEY
-    label: PiqueSignal member key
+    label: Pique Signal member key
     description: "Optional. Unlocks the live member (gated) board. It is your API key from piquesignal.xyz > Account > API key (needs a $49 Gated or $99 Builder plan: https://piquesignal.xyz/unlock). The board's 'Unlock with your key' steps open this box."
   member_view_in_chats:
     type: bool
     default: true
     label: Let Hermes use my member board in chats
     description: "On: in your own Hermes Desktop, terminal and CLI chats Hermes answers with your member board (never in a chat app, never in the Bot Chat, never in a turn another agent or a kanban card wrote). Off: every chat gets the free board; the board page itself is not affected. Turn it off if one of your chats is linked to a Telegram or Discord group. Off applies at once; turning it back on takes effect after Hermes restarts or the plugin is reloaded."
+  board_talk_tts_via_sdk:
+    type: bool
+    default: false
+    label: Speak Board talk through Hermes' tool call
+    description: "Off (default): Board talk speaks as before. On: when your Hermes voice is not Edge, Board talk asks Hermes to speak each line through its public tool call (the same text-to-speech tool, voice and checks). Applies at the next spoken line. Turn it off if Board talk stops speaking."

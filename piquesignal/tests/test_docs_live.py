@@ -25,7 +25,7 @@ YAML_WORDS = ("Missed strip", "Free Pick", "the Missed and banner pictures (/api
               "random 0-120 s", "Missed reveals and pictures excepted", "stops it until Hermes restarts", "history answers capped at 3.2 MB",
               "no banner view or click counting", "the server's 24 h history", "banner links too")
 GUIDE_WORDS = ("### 9.14 Missed strip, Free Pick, banners and Featured Callers", "Paid gets it first", 'banners marked "Ad"',
-               "Featured Callers", "The last 24 hours from PiqueSignal", "random 0 to 2 minutes", "No view or click is counted",
+               "Featured Callers", "The last 24 hours from Pique Signal", "random 0 to 2 minutes", "No view or click is counted",
                "not Missed reveals and pictures", "Missed reveals are kept in memory only",
                "does not ask for it again until Hermes restarts")
 CORE_WORDS = ("HERMES_LIVE = True", "/api/free-board/missed", "/api/pull/featured-callers", "/api/pull/missed-reveal/",
@@ -197,8 +197,8 @@ class DocsFollowTheSwitch(unittest.TestCase):
         self.assertEqual(csrc.count('"' + dex + '"'), 1)
         self.assertEqual(csrc.count('"' + gecko + '"'), 1)
         self.assertIn("_live_transport(_LIVE_PAIRS + mint,", csrc)          # the prefix + a validated mint, nothing else
-        # the GeckoTerminal prefix + a checked pool + fixed path / query words (numbers from CHART_TFS), nothing else
-        self.assertIn('url = "%s%s/ohlcv/%s?aggregate=%d&limit=%d&currency=usd" % (_CHART_POOLS, pool, unit, agg, limit)',
+        # the GeckoTerminal prefix + a checked pool + fixed path / query words (numbers from CHART_TFS) + the checked mint
+        self.assertIn('url = "%s%s/ohlcv/%s?aggregate=%d&limit=%d&currency=usd&token=%s" % (_CHART_POOLS, pool, unit, agg, limit, mint)',
                       csrc)
         self.assertEqual(csrc.count("_chart_transport("), 1)
         readme = _read(PLUGIN / "README.md")

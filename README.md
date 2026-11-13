@@ -12,7 +12,7 @@ only; nothing trades.
 and runs rug and safety checks before it calls a coin (risky coins are removed or tagged). **Fake Volume** flags faked
 or bundled trading and **DEX paid** marks a paid Dexscreener listing. Members also get **Real Crowd** (padded holder
 counts), **Clear Eyes** (a plain strength read: Early, Building, Peak or Faded), **Early Edge**, **Featured Callers**
-and a board with known rugs and dead coins removed. Past calls are on a public track record at
+(also on the free board) and a board with known rugs and dead coins removed. Past calls are on a public track record at
 piquesignal.xyz/track-record. No check catches every rug.
 
 **What the plugin adds to Hermes:**

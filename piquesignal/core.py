@@ -24,15 +24,17 @@ picked only, no Dexscreener read, at most 1 request per 10 s, back-off 10 s doub
 never makes a network request (it reads the last result only).
 The NEW read-only addresses are ON in this release (HERMES_LIVE = True; the server side is installed): keyless
 /api/free-board/missed, /free-pick, /banners (each at most every 30 s / 30 s / 5 min), /img/<key> (only keys those
-answers name, <= 2 per 10 s; logo <= 64 KB, banner <= 2 MB, PNG / JPEG / WebP) and /history (the free board's last
-24 h), and with the member key /api/pull/featured-callers (>= 15 min, inside the 60 % pacing), /api/pull/history
-(the member board's last 24 h) and /api/pull/missed-reveal/<id> (a user click only: >= 10 s apart, <= 50 a day and
-<= 10 % of the daily limit, 30 min cache). Fixed URLs, no query string, never the key on a keyless path; a random
-0..120 s before the first request of each polled path (not reveal / images); any 4xx but 429 = that part stops 15 min
-and is hidden (a history 404 = gone until the next start); 429 / 503 = Retry-After honoured, the last good result
-kept. Each history view: at most once per 20 min, only when its newest Rewind frame is > 15 min old, answer <= 3.2 MB;
-the decoded rows are merged into the pane's Rewind files (member: only for the same key). These parts are for the
-panel only: the agent tools and hooks never read them. HERMES_LIVE = False is the kill switch (nothing new asked).
+answers name, <= 2 per 10 s; logo <= 64 KB, banner <= 2 MB, PNG / JPEG / WebP), /history (the free board's last 24 h)
+and /api/free-board/featured (Featured Callers on the free board: its own switch, FREE_FEATURED_LIVE = True; at most
+once a minute, only while a free board is open), and with the member key /api/pull/featured-callers (>= 15 min,
+inside the 60 % pacing), /api/pull/history (the member board's last 24 h) and /api/pull/missed-reveal/<id> (a user
+click only: >= 10 s apart, <= 50 a day and <= 10 % of the daily limit, 30 min cache). Fixed URLs, no query string,
+never the key on a keyless path; a random 0..120 s before the first request of each polled path (not reveal /
+images); any 4xx but 429 = that part stops 15 min and is hidden (a history 404 = gone until the next start); 429 /
+503 = Retry-After honoured, the last good result kept. Each history view: at most once per 20 min, only when its
+newest Rewind frame is > 15 min old, answer <= 3.2 MB; the decoded rows are merged into the pane's Rewind files
+(member: only for the same key). These parts are for the panel only: the agent tools and hooks never read them.
+HERMES_LIVE = False is the kill switch (nothing new asked).
 
 What the agent may see: ONLY fields the board itself shows, the website's numbers in spoken words (coin_facts: "3.6
 million dollars", "45 minutes", "2.4 times"; the reply may be read aloud).
@@ -64,7 +66,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 PLUGIN_ID = "piquesignal"
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 # THE GATE: True = the new addresses are live (this release). False = the kill switch: the new addresses are never
 # requested (no 4xx, no 503 polling) and every old behaviour is as before. The desktop pane has its own copy
 # (plugin.src.js HERMES_LIVE); both flip together (a test fails when they differ).
@@ -73,6 +75,11 @@ HERMES_LIVE = True
 # registered, so no Dexscreener read and no X search ever starts. The pane has its own copy (plugin.src.js DEEP_CHECK,
 # its buttons); both flip together (a test fails when they differ).
 DEEP_CHECK = True
+# Featured Callers on the FREE board (keyless fc.FREE_FEATURED_URL): True = live in this release (the server route is
+# installed). False = its own kill switch: featured_free() answers "off" with no request and the pane shows nothing new.
+# The pane has its own copy (plugin.src.js FREE_FEATURED_LIVE); both flip together, with the docs (a test fails when
+# they differ).
+FREE_FEATURED_LIVE = True
 KEY_ENV = "PIQUESIGNAL_API_KEY"
 _KEY_RE = re.compile(r"[A-Za-z0-9_\-.]{16,200}")
 _DAILY_SHARE = 0.6            # use at most 60 % of the key's daily limit (the member keeps the rest for their own use)
@@ -308,6 +315,11 @@ def _parse_member_history(body):
 _missed = fc.FeedClient(_transport, url=fc.MISSED_URL, parse=fc.parse_missed, min_interval_s=30, **_NEW_PATH)
 _free_pick = fc.FeedClient(_transport, url=fc.FREE_PICK_URL, parse=fc.parse_free_pick, min_interval_s=30, **_NEW_PATH)
 _banners = fc.FeedClient(_transport, url=fc.BANNERS_URL, parse=fc.parse_banners, min_interval_s=300, **_NEW_PATH)
+# Featured Callers on the free board: KEYLESS (no auth, so no Authorization header is ever built), NOT in _KEY_CLIENTS,
+# never paced by _pace (it uses no member quota); parse_free_featured (the free-feed's own cleaner, then the member
+# contract's) is its second check.
+_featured_free = fc.FeedClient(_transport, url=fc.FREE_FEATURED_URL, parse=fc.parse_free_featured, min_interval_s=60,
+                               **_NEW_PATH)
 _free_history = fc.FeedClient(_transport, url=fc.FREE_HISTORY_URL, parse=_parse_free_history,
                               min_interval_s=_HISTORY_EVERY_S, gone_on_404=True, max_bytes=fc.HISTORY_MAX_BYTES,
                               **_NEW_PATH)
@@ -359,6 +371,14 @@ def featured() -> dict:
     k = None
     _pace(entry)
     return _member_get(entry, "featured", fp)
+
+
+def featured_free() -> dict:
+    """Featured Callers on the free board ({"callers": [...]}), keyless: its own client, never the member key, never the
+    member list. Only while HERMES_LIVE and FREE_FEATURED_LIVE; else "off" with no request."""
+    if not (HERMES_LIVE and FREE_FEATURED_LIVE):
+        return _off()
+    return _featured_free.get()
 
 
 def history(view) -> dict:

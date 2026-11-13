@@ -1,7 +1,7 @@
 name: piquesignal
 label: 'Pique Signal'
 kind: standalone
-version: 1.5.0
+version: 1.5.1
 author: Pique Signal
 license: LicenseRef-PiqueSignal AND OFL-1.1 AND Apache-2.0 AND MIT
 description: >
@@ -23,15 +23,16 @@ description: >
   about your board with two hosts (one voice with a non-Edge voice) and captions, made only when you press Board talk or turn on the morning Board
   talk; with Back, Pause, Skip, Stop and Resume; More and Ask send the coin on air to your Hermes chat), Rewind (the board as it was earlier + "since you looked away"; after
   a gap the board's last 24 h from piquesignal.xyz fills it in), the website's Missed strip, Free Pick and "Ad"
-  banners on the free board, Featured Callers on the member board, answers in the chat about what each tag means, pop-ups for new calls and for
+  banners on the free board, Featured Callers on the free and member boards, answers in the chat about what each tag means, pop-ups for new calls and for
   your saved coins, a morning-brief Cron blueprint and a status-bar count, all in one Hermes box above the board that
   starts closed. Replies may be read aloud, so the tool texts ask Hermes to write a contract address only when you
   ask for it, and then only inside a fenced ``` code block (never in normal text or inline code), on every chat
   surface.
   Disclosure: the plugin's backend calls
   piquesignal.xyz (free board; member board, key info and Early Edge when a key is set; also the Missed strip, Free
-  Pick, banners, the Missed and banner pictures (/api/free-board/img/)
-  and the free board's 24 h history with no key, and Featured Callers, the member
+  Pick, banners, the Missed and banner pictures (/api/free-board/img/),
+  the free board's 24 h history and Featured Callers on the free board (/api/free-board/featured: polled only while
+  the free board is open, at most once a minute) with no key, and Featured Callers, the member
   board's 24 h history and a Missed reveal on your click with a key (fixed addresses, no query string, the key never on
   the no-key ones; each new part waits a random 0-120 s before its first request after Hermes starts, Missed reveals
   and pictures excepted; a refused request stops that part for about 15 minutes (plus a little random extra), a 404 on a 24 h history address stops it until

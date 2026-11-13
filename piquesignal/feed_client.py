@@ -2,7 +2,10 @@
 Early Edge, member /me; and the NEW read-only addresses of the server contract, live in this release (core.py
 HERMES_LIVE = True): keyless /api/free-board/missed, /free-pick, /banners, /img/<key> (logo <= 64 KB, banner <= 2 MB,
 PNG / JPEG / WebP with matching magic) and /history, keyed /api/pull/featured-callers, /missed-reveal/<id> and
-/history; history answers <= 3.2 MB, decoded strictly (wire v1) and re-cleaned row by row). Used
+/history; history answers <= 3.2 MB, decoded strictly (wire v1) and re-cleaned row by row). Also keyless
+/api/free-board/featured (Featured Callers on the free board, live in this release: asked only while
+core.FREE_FEATURED_LIVE = True too, at most once a minute, only while a free board is open; parse_free_featured = the
+free-feed's own cleaner freepickclean.clean_featured, then parse_featured, is its second check; never the key). Used
 by dashboard/plugin_api.py as SHARED long-lived instances - never one per request, or the floor and the back-off would
 do nothing. The desktop pane never calls our server directly.
 
@@ -46,7 +49,8 @@ def _load_sibling(name):
 
 _rowclean = _load_sibling("rowclean")
 _gated = _load_sibling("gatedclean")
-_hermes = _load_sibling("freepickclean")      # the exact copy of the free-feed's Hermes cleaners (Missed / Free Pick / banners)
+_hermes = _load_sibling("freepickclean")      # the exact copy of the free-feed's Hermes cleaners (Missed / Free Pick /
+#                                               banners / the free board's Featured Callers)
 clean_row = _rowclean.clean_row
 
 BASE = "https://piquesignal.xyz"
@@ -60,6 +64,8 @@ FREE_PICK_URL = BASE + "/api/free-board/free-pick"
 BANNERS_URL = BASE + "/api/free-board/banners"
 IMG_URL_PREFIX = BASE + "/api/free-board/img/"
 FREE_HISTORY_URL = BASE + "/api/free-board/history"
+# keyless Featured Callers on the free board (live in this release): asked only while core.FREE_FEATURED_LIVE too
+FREE_FEATURED_URL = BASE + "/api/free-board/featured"
 FEATURED_URL = BASE + "/api/pull/featured-callers"
 REVEAL_URL_PREFIX = BASE + "/api/pull/missed-reveal/"
 HISTORY_URL = BASE + "/api/pull/history"
@@ -274,7 +280,22 @@ def _label(v, cap=FEATURED_LABEL_MAX):
 def parse_featured(body):
     """/api/pull/featured-callers -> {"count", "as_of", "callers": [<= 10 x {key, name, handle, tagline, count,
     calls: [<= 20 x {symbol, mint, date, ts, essence, body, mult}]}]} (contract 0.2). Anything else is dropped."""
+    return _featured_doc(_load_json(body))
+
+
+def parse_free_featured(body):
+    """/api/free-board/featured (keyless) -> the same shape as parse_featured. TWO cleaners in a row: first the free-feed's
+    own (freepickclean.clean_featured, the exact server copy: no source phrase anywhere, no http(s) URL in a label or a
+    symbol, no link of any form in the call text; a caller / call that fails is dropped), then the member contract's
+    (parse_featured's rules), so the pane gets the one shape it already draws. A body clean_featured refuses => ValueError (the client keeps its back-off rules)."""
     d = _load_json(body)
+    cf = _hermes.clean_featured(d)
+    if cf is None:
+        raise ValueError("bad shape")
+    return _featured_doc({"as_of": d.get("as_of"), "callers": cf["callers"]})
+
+
+def _featured_doc(d):
     if not isinstance(d.get("callers"), list):
         raise ValueError("bad shape")
     callers = []

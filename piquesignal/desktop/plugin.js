@@ -185,7 +185,7 @@ function glanceCard(s,i,initial){
   card.addEventListener("dragend",function(){draggingMint=null;card.classList.remove("dragging");railDragOpen(false);});
   card.setAttribute("aria-label",s.sym+", "+multStr(mult)+", "+dv(s.mcap)+" market cap, flagged "+dv(s.age)+" ago."+(s.feeRug===true?" Warning: fake or bundled volume.":(s.feeRugFlicker===true?" Warning: fake volume coming and going.":""))+((s.realCrowd&&s.realCrowd.padded===true)?" Warning: padded holder count.":"")+(s.dexPaid===true?" DEX paid.":"")+" Open details.");
   if(initial){card.style.animationDelay=Math.min(i*8,360)+"ms";}else{card.style.animation="none";}
-  var sp=sparkSvg(sparkPts(1,chartEnd(mult,faded),seedFrom(String(s.sym)+String(s.mint))),100,40,up?UP_HEX:DOWN_HEX,false);sp.setAttribute("class","spark-bg");card.appendChild(sp);
+  var sp=sparkSvg(sparkPts(1,chartEnd(mult,faded),seedFrom(String(s.sym)+String(s.mint))),100,40,(s._fp===true?(faded?DOWN_HEX:'#34D3E6'):(up?UP_HEX:DOWN_HEX)),false);sp.setAttribute("class","spark-bg");card.appendChild(sp);
   card.appendChild(avatar(s));
   var idw=el("div","idw");
   idw.appendChild(el("div","sym",dv(s.sym)));
@@ -211,19 +211,21 @@ var CE_STEP_LABEL={flagged:"Flagged",heating:"Early",strong:"Building",confirmed
 function buildClearEyes(s){
   if(!s||(!s.ceStep&&s.bail!==true))return null;
   var bail=(s.bail===true);
-  var dead=(!bail&&s.ceStep==="fading"), cool=(!bail&&s.ceStep==="cooling"), floored=(!bail&&s.ceStep==="floor");
-  var box=el("div","ce"+((bail||dead)?" dead":cool?" cooling":floored?" floor":""));
+  var dead=(!bail&&s.ceStep==="fading"), cool=(!bail&&s.ceStep==="cooling"), floored=(!bail&&s.ceStep==="floor"), early=(!bail&&s.ceStep==="early");
+  var box=el("div","ce"+((bail||dead)?" dead":cool?" cooling":floored?" floor":early?" early":""));
   var hd=el("div","ce-hd");
   hd.appendChild(el("span","ce-name","CLEAR EYES"));
   hd.appendChild(el("span","ce-sub","how strong it's gotten"));
   var q=el("button","ce-q","?");q.type="button";q.setAttribute("aria-label","What is Clear Eyes?");q.setAttribute("aria-expanded","false");q.setAttribute("aria-controls","ce-help");
   hd.appendChild(q);box.appendChild(hd);
   var lad=el("div","ce-lad");
-  if(bail||dead||cool||floored){
+  if(bail||dead||cool||floored||early){
     lad.setAttribute("role","img");
     if(bail){lad.setAttribute("aria-label","Rug risk — bail out");lad.appendChild(el("span","ce-step dead-step","⚠ Rug risk"));}
     else if(dead){lad.setAttribute("aria-label","Faded — this coin is dead");lad.appendChild(el("span","ce-step dead-step","Faded"));}
     else if(cool){lad.setAttribute("aria-label","Pulled back below the flag");lad.appendChild(el("span","ce-step cool-step","Pulled back"));}
+    else if(early){lad.setAttribute("aria-label","Early — a fresh call, still holding");lad.appendChild(el("span","ce-step early-step","Early"));}
+     
     else{lad.setAttribute("aria-label","Warning — under $15k market cap");lad.appendChild(el("span","ce-step floor-step","⚠ Under $15k"));}
   }else{
     var idx=(typeof s.ceStepIndex==="number")?s.ceStepIndex:0;
@@ -278,7 +280,7 @@ function buildDetail(s){
   var close=el("button","close","×");close.type="button";close.setAttribute("aria-label","Close");close.addEventListener("click",closeDetail);
   head.appendChild(tw);head.appendChild(mw);head.appendChild(close);
 
-  var spark=el("div","m-spark");spark.appendChild(sparkSvg(sparkPts(1,chartEnd(mult,faded),seedFrom(String(s.sym)+String(s.mint))),300,52,up?UP_HEX:DOWN_HEX,true));
+  var spark=el("div","m-spark");spark.appendChild(sparkSvg(sparkPts(1,chartEnd(mult,faded),seedFrom(String(s.sym)+String(s.mint))),300,52,(s._fp===true?(faded?DOWN_HEX:'#34D3E6'):(up?UP_HEX:DOWN_HEX)),true));
   spark.appendChild(el("span","lab","since flagged"));
 
   var sub=el("div","m-sub");sub.appendChild(el("span","tag","SOL"));
@@ -1567,7 +1569,7 @@ function glanceCard(s,i,initial){
   card.addEventListener("dragend",function(){draggingMint=null;card.classList.remove("dragging");railDragOpen(false);});
   card.setAttribute("aria-label",s.sym+", "+multStr(mult)+", "+dv(s.mcap)+" market cap, flagged "+dv(s.age)+" ago."+(s.feeRug===true?" Warning: fake or bundled volume.":(s.feeRugFlicker===true?" Warning: fake volume coming and going.":""))+((s.realCrowd&&s.realCrowd.padded===true)?" Warning: padded holder count.":"")+(s.dexPaid===true?" DEX paid.":"")+" Open details.");
   if(initial){card.style.animationDelay=Math.min(i*8,360)+"ms";}else{card.style.animation="none";}
-  var sp=sparkSvg(sparkPts(1,chartEnd(mult,faded),seedFrom(String(s.sym)+String(s.mint))),100,40,up?UP_HEX:DOWN_HEX,false);sp.setAttribute("class","spark-bg");card.appendChild(sp);
+  var sp=sparkSvg(sparkPts(1,chartEnd(mult,faded),seedFrom(String(s.sym)+String(s.mint))),100,40,(s._fp===true?(faded?DOWN_HEX:'#34D3E6'):(up?UP_HEX:DOWN_HEX)),false);sp.setAttribute("class","spark-bg");card.appendChild(sp);
   card.appendChild(avatar(s));
   var idw=el("div","idw");
   idw.appendChild(el("div","sym",dv(s.sym)));
@@ -1609,19 +1611,23 @@ var CE_STEP_LABEL={flagged:"Flagged",heating:"Early",strong:"Building",confirmed
 
 
 function buildClearEyes(s){
-  if(!s||!s.ceStep)return null;
-  var dead=(s.ceStep==="fading"), cool=(s.ceStep==="cooling"), floored=(s.ceStep==="floor");
-  var box=el("div","ce"+(dead?" dead":cool?" cooling":floored?" floor":""));
+  if(!s||(!s.ceStep&&s.bail!==true))return null;
+  var bail=(s.bail===true);
+  var dead=(!bail&&s.ceStep==="fading"), cool=(!bail&&s.ceStep==="cooling"), floored=(!bail&&s.ceStep==="floor"), early=(!bail&&s.ceStep==="early");
+  var box=el("div","ce"+((bail||dead)?" dead":cool?" cooling":floored?" floor":early?" early":""));
   var hd=el("div","ce-hd");
   hd.appendChild(el("span","ce-name","CLEAR EYES"));
   hd.appendChild(el("span","ce-sub","how strong it's gotten"));
   var q=el("button","ce-q","?");q.type="button";q.setAttribute("aria-label","What is Clear Eyes?");q.setAttribute("aria-expanded","false");q.setAttribute("aria-controls","ce-help");
   hd.appendChild(q);box.appendChild(hd);
   var lad=el("div","ce-lad");
-  if(dead||cool||floored){
+  if(bail||dead||cool||floored||early){
     lad.setAttribute("role","img");
-    if(dead){lad.setAttribute("aria-label","Faded — this coin is dead");lad.appendChild(el("span","ce-step dead-step","Faded"));}
+    if(bail){lad.setAttribute("aria-label","Rug risk — bail out");lad.appendChild(el("span","ce-step dead-step","⚠ Rug risk"));}
+    else if(dead){lad.setAttribute("aria-label","Faded — this coin is dead");lad.appendChild(el("span","ce-step dead-step","Faded"));}
     else if(cool){lad.setAttribute("aria-label","Pulled back below the flag");lad.appendChild(el("span","ce-step cool-step","Pulled back"));}
+    else if(early){lad.setAttribute("aria-label","Early — a fresh call, still holding");lad.appendChild(el("span","ce-step early-step","Early"));}
+     
     else{lad.setAttribute("aria-label","Warning — under $15k market cap");lad.appendChild(el("span","ce-step floor-step","⚠ Under $15k"));}
   }else{
     var idx=(typeof s.ceStepIndex==="number")?s.ceStepIndex:0;
@@ -1676,7 +1682,7 @@ function buildDetail(s){
   var close=el("button","close","×");close.type="button";close.setAttribute("aria-label","Close");close.addEventListener("click",closeDetail);
   head.appendChild(tw);head.appendChild(mw);head.appendChild(close);
 
-  var spark=el("div","m-spark");spark.appendChild(sparkSvg(sparkPts(1,chartEnd(mult,faded),seedFrom(String(s.sym)+String(s.mint))),300,52,up?UP_HEX:DOWN_HEX,true));
+  var spark=el("div","m-spark");spark.appendChild(sparkSvg(sparkPts(1,chartEnd(mult,faded),seedFrom(String(s.sym)+String(s.mint))),300,52,(s._fp===true?(faded?DOWN_HEX:'#34D3E6'):(up?UP_HEX:DOWN_HEX)),true));
   spark.appendChild(el("span","lab","since flagged"));
 
   var sub=el("div","m-sub");sub.appendChild(el("span","tag","SOL"));
@@ -2534,6 +2540,10 @@ const DEEP_CHECK = true
  
  
 const CHART_LIVE = true
+ 
+ 
+ 
+const FREE_FEATURED_LIVE = true
 
  
  
@@ -2861,7 +2871,7 @@ function toEdgePanel (coins) {
  
  
  
-const NEW_POLL_MS = { missed: 30000, freePick: 30000, banners: 300000, featured: 300000 }
+const NEW_POLL_MS = { missed: 30000, freePick: 30000, banners: 300000, featured: 300000, featuredFree: 60000 }
 const IMG_KEY_RE = /^([0-9a-f]{16}|b[0-9]{1,9}-[0-9a-f]{12})$/
 const MISSED_IMG_RE = /^(?:https:\/\/piquesignal\.xyz)?\/api\/app2\/missed-img\/([0-9a-f]{16})$/
  
@@ -2975,6 +2985,33 @@ function featuredList (data) {
   const c = data && data.board && Array.isArray(data.board.callers) ? data.board.callers : []
   return c.filter(x => x && typeof x.name === 'string' && Array.isArray(x.calls)).slice(0, 10)
 }
+ 
+ 
+ 
+ 
+function freeFeatRow () {
+  const d = window.document
+  const row = d.createElement('div'); row.className = 'fclink-row'; row.hidden = true
+  const a = d.createElement('a'); a.className = 'fclink'; a.setAttribute('href', '/featured'); a.setAttribute('aria-label', 'Featured Callers'); a.hidden = true
+  a.textContent = 'Featured Callers '
+  const arw = d.createElement('span'); arw.className = 'arw'; arw.textContent = '→'; a.appendChild(arw)
+  row.appendChild(a)
+  return row
+}
+function freeFeatShow (a, on) { a.hidden = !on; if (a.parentNode) a.parentNode.hidden = !on }
+ 
+ 
+function featStale (ov, view, memberOk) {
+  return !!ov && (ov.getAttribute('data-pqs-view') !== view || (view === 'gated' && memberOk !== true))
+}
+ 
+ 
+ 
+const FREE_FC_RULES = ['.fclink-row{margin:12px 0 0}',
+  '.fclink{display:inline-flex;align-items:center;gap:7px;font-family:var(--sans);font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none;background:linear-gradient(180deg,rgba(237,245,255,.18),rgba(237,245,255,.04)),rgba(22,33,56,.12);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid var(--line-hi);border-radius:10px;padding:9px 15px}',
+  '.fclink:hover{border-color:var(--accent);color:var(--ink)}', '.fclink .arw{font-family:var(--mono);font-weight:700}',
+  '.fclink-row[hidden]{display:none}', '.fclink[hidden]{display:none}']
+const FREE_FC_CSS = FREE_FC_RULES.map(r => ['d', 'm'].map(b => '.pqs-' + b + '.pqs-free ' + r.slice(0, r.indexOf('{'))).join(',') + r.slice(r.indexOf('{'))).join('')
 const FEAT_FROST = 'linear-gradient(135deg,rgba(8,71,196,.14),rgba(8,71,196,.05) 50%,rgba(26,26,46,.85))'
 const FEAT_CSS = [
   '.pqs-feat{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-start;justify-content:center;padding:28px 14px;background:rgba(4,8,16,.72);overflow:hidden}',
@@ -4277,6 +4314,15 @@ const FOOT_BG_CSS = ['d', 'm'].flatMap(b => ['free', 'gated'].map(v => 'div:has(
 
  
  
+ 
+ 
+ 
+const FP_CE_RULES = ['.ce.dead{border-color:rgba(255,80,95,.3)}', '.ce.cooling{border-color:rgba(224,163,74,.32)}',
+  '.ce-step.early-step{color:var(--up);border-color:var(--up);background:var(--bg)}', '.ce-q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}']
+const FP_CE_CSS = FP_CE_RULES.map(r => ['d', 'm'].map(b => '.pqs-' + b + '.pqs-free .modal.fp ' + r.slice(0, r.indexOf('{'))).join(',') + r.slice(r.indexOf('{'))).join('')
+
+ 
+ 
 const PANE_PHONE_MAX = 600
 function PaneBoard () {
   const ref = useRef(null); const [w, setW] = useState(0)
@@ -4720,12 +4766,15 @@ function Board ({ phone, inPane }) {
   const pickQ = HERMES_LIVE ? useRest('free-pick', '/free-pick', NEW_POLL_MS.freePick, !gated) : null
   const bannersQ = HERMES_LIVE ? useRest('banners', '/banners', NEW_POLL_MS.banners, !gated) : null
   const featQ = HERMES_LIVE ? useRest('featured:' + (keyId || ''), '/featured', NEW_POLL_MS.featured, gated && memberOk && !!keyId) : null
+   
+  const featFreeQ = HERMES_LIVE && FREE_FEATURED_LIVE ? useRest('featured-free', '/featured-free', NEW_POLL_MS.featuredFree, !gated) : null
   if (HERMES_LIVE) {
     const mb = missedQ && missedQ.data && missedQ.data.board
     engine.current.missed = mb && Array.isArray(mb.missed) ? mb.missed : null
     const pb = pickQ && pickQ.data && pickQ.data.board
     engine.current.freePick = pb && typeof pb === 'object' && Object.prototype.hasOwnProperty.call(pb, 'nextInSecs') ? { pick: pb.pick || null, nextInSecs: pb.nextInSecs } : null
     engine.current.featured = gated && memberOk ? featuredList(featQ && featQ.data) : []
+    engine.current.featuredFree = !gated ? featuredList(featFreeQ && featFreeQ.data) : []
     engine.current.keyId = keyId
   }
 
@@ -4929,6 +4978,9 @@ function Board ({ phone, inPane }) {
     hermesRef.current = hrow; engine.current.hsig = null; engine.current.pparts = false; engine.current.rwrow = false; paintHermes()      
      
      
+    if (HERMES_LIVE && FREE_FEATURED_LIVE && !gated && hrow.parentNode) hrow.parentNode.insertBefore(freeFeatRow(), hrow.nextSibling)
+     
+     
     const onHermesKey = e => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       if (keyEsc(place, e, hrow.hidden)) { engine.current.hfocus = 'kunlock'; paintHermes(); return }
@@ -4992,10 +5044,19 @@ function Board ({ phone, inPane }) {
     if (rwTRef.current != null) setRwT(null)
     setSince(null); engine.current.since = null; engine.current.away = null
      
+    const featTag = v => { const ov = root.querySelector('.pqs-feat'); if (ov) ov.setAttribute('data-pqs-view', v) }    
     const onFeatured = () => {                            
+      if (view === 'free' && viewRef.current === 'free') {    
+        const fl = engine.current.featuredFree
+        if (!HERMES_LIVE || !FREE_FEATURED_LIVE || !Array.isArray(fl) || !fl.length) return false
+        openFeatured(root, fl, m => route(SITE + '/gated#coin=' + m, v => setView(v)), u => route(u, v => setView(v)))    
+        featTag('free')
+        return true
+      }
       const list = engine.current.featured
       if (viewRef.current !== 'gated' || !engine.current.hasKey || !Array.isArray(list) || !list.length) return false
       openFeatured(root, list, m => route(SITE + '/gated#coin=' + m, v => setView(v)), u => route(u, v => setView(v)))
+      featTag('gated')
       return true
     }
     const env = makeEnv({ hostEl, scroller, root, phone, view, getRows: () => (viewRef.current === 'gated' && !engine.current.hasKey) ? [] : (engine.current.shown || engine.current.rows), getHasKey: () => engine.current.hasKey, getEdge: () => (viewRef.current === 'gated' && engine.current.hasKey) ? engine.current.edge : null, getAnswered: () => engine.current.answered === true, onView: v => setView(v),
@@ -5216,14 +5277,17 @@ function Board ({ phone, inPane }) {
     return () => { timers.forEach(id => window.clearInterval(id)) }
   }, [key, memberOk, bannersQ && bannersQ.data])
    
+   
+   
   useEffect(() => {
     if (!HERMES_LIVE) return
     const root = rootRef.current; if (!root) return
-    const a = root.querySelector('.fclink'); if (a) a.hidden = !(gated && memberOk && engine.current.featured.length > 0)
-    if (!(gated && memberOk)) popZGone(root.querySelector('.pqs-feat'))
+    const a = root.querySelector('.fclink'); if (a && gated) a.hidden = !(gated && memberOk && engine.current.featured.length > 0)
+    if (a && !gated) freeFeatShow(a, engine.current.featuredFree.length > 0)
+    if (featStale(root.querySelector('.pqs-feat'), view, memberOk)) popZGone(root.querySelector('.pqs-feat'))
     if (DC_ON && status.data && !memberOk) dcMemberDrop()       
     if (CH_ON && status.data && !memberOk) chartMemberDrop()    
-  }, [key, memberOk, featQ && featQ.data])
+  }, [key, memberOk, featQ && featQ.data, featFreeQ && featFreeQ.data])
 
    
   useEffect(() => {
@@ -5314,6 +5378,8 @@ function Board ({ phone, inPane }) {
     h('style', null, TALK_CSS),                           
     h('style', null, BLUE_CSS),                           
     h('style', null, FOOT_BG_CSS),                        
+    gated ? null : h('style', null, FP_CE_CSS),           
+    HERMES_LIVE && FREE_FEATURED_LIVE && !gated ? h('style', null, FREE_FC_CSS) : null,    
     HERMES_LIVE ? h('style', null, FEAT_CSS) : null,      
     DC_ON ? h('style', null, DC_CSS) : null,              
     CH_ON ? h('style', null, CH_CSS) : null,              

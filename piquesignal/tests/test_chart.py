@@ -713,8 +713,8 @@ class ChartDisclosureTest(unittest.TestCase):
         self.assertIn("licenses/lightweight-charts-LICENSE.txt", readme)
 
     def test_version_stays(self):
-        self.assertEqual(core.VERSION, "1.5.0")
-        self.assertRegex((PLUGIN / "plugin.yaml").read_text(encoding="utf-8"), r"(?m)^version: 1\.5\.0$")
+        self.assertEqual(core.VERSION, "1.5.1")
+        self.assertRegex((PLUGIN / "plugin.yaml").read_text(encoding="utf-8"), r"(?m)^version: 1\.5\.1$")
 
 
 # ----------------------------------------------------------------------------------------------- live trades (ticks)

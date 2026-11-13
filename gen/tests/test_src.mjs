@@ -19,7 +19,7 @@ src = src.replace(/export default \{[\s\S]*$/, '') +
   'dcMemberDrop, memberRowsDrop, memberKeyChange, DC_NAME, dcHeldFlush, dcMergePosts, dcFromCard, dcSavedPosts, ' +
   'dcXQuality, dcXQualityWords, dcXCapped, DC_X_CAP_WORDS, DC_X_CAPPED, chartTradesShape, chartMerge, chartLiveClock, CH_LIVE_MSG, CH_LIVE_NOTE, CH_LIVE_SLACK_MS, CHART_LIVE, CH_ON, CH_CSS, CH_MSG, CH_LINKS, CH_NOTICE, CH_PAGE_NONE, CHART_ROUTE, chartShape, chartPrice, chartOff, chartTick, chartWhen, chartFlagAt, chartOptions, chartAsk, chartCache, chartViews, ' +
   'popRowFit, chartPress, chartBox, chartPage, ChartPage, chartRowOf, chartPopRow, chartSelOf, chartCloseIn, chartMemberDrop, chartCloseAll, tgUrl, openFeatured as __openFeatured, ' +
-  'spokenAmount, usdWords, numWords, ageWords, timesWords, askHermesText, coinCard, shared as __shared, LIVE_HEARD_MSG, TOOLBAR_CSS, TALK_CSS, HERMES_CSS, BLUE_CSS, BLUE_CSS_R3, BLUE5_CSS, BLUE6_CSS, BLUE7_CSS, BLUE8_CSS, FOOT_BG_CSS }\n' +
+  'spokenAmount, usdWords, numWords, ageWords, timesWords, askHermesText, coinCard, shared as __shared, LIVE_HEARD_MSG, TOOLBAR_CSS, TALK_CSS, HERMES_CSS, BLUE_CSS, BLUE_CSS_R3, BLUE5_CSS, BLUE6_CSS, BLUE7_CSS, BLUE8_CSS, FOOT_BG_CSS, FP_CE_CSS }\n' +
   'export { popZoom, popZGone, popZCss, POPZ_MAX, FEAT_Z_CSS, DC_Z_CSS, CH_Z_CSS }\n' +
   'export function __setCtx (c) { CTX = c }\n' +
   'export function __chartLiveOn () { return chartLiveOn }\n' +
@@ -772,7 +772,7 @@ ok(/area: 'routes', data: \{ path: ROUTE \}, render: \(\) => h\(PageBoard\)/.tes
   }
   // website parts untouched: the generated engines + the website CSS sources keep their bytes
   const md5 = f => crypto.createHash('md5').update(fs.readFileSync(path.join(genDir, f))).digest('hex')
-  for (const [f, h5] of [['engine_parts.js', 'e21f6ebbbb2a0c7fc480b31c5f4f963c'], ['d_free.css', 'a8d29a77a88efe9ac6aa7b0470c63b68'],
+  for (const [f, h5] of [['engine_parts.js', '25327edd0a494a637ce8829323705d8c'], ['d_free.css', 'a8d29a77a88efe9ac6aa7b0470c63b68'],
     ['d_gated.css', '1c52ca450b917dd833c16a87b55edb97'], ['m_free.css', '484e210f8855f62e4624c992144861c2'],
     ['m_gated.css', '0ed21914e38c5e1f67755b91fd572257'], ['fonts.css', 'bb699e919dd457a44266f80cf97d59fa']])
     ok(md5(f) === h5, f + ' unchanged (website look)')
@@ -824,11 +824,109 @@ ok(/area: 'routes', data: \{ path: ROUTE \}, render: \(\) => h\(PageBoard\)/.tes
     ok(more.endsWith('\n' + REALV + '\n];'), k + ': More ends with Hide fake vol, no trailing comma')
   }
   ok(!/\{id:'(caller|flash|signals)'/.test(ep), 'engine_parts.js: the 3 ids appear nowhere')
+  // the free live pick = the gated look (gen_engine.py _FP_GATED_LOOK, the 2 free boards only): (a) the card chart and (b) the
+  // pop-up chart take the gated colour only for s._fp, (c) the free buildClearEyes (built only for the pick) = the gated one.
+  // Undoing exactly those swaps gives the engines before them (md5 e21f6ebb) = ep0; the older chain below runs on ep0.
+  const FP_CH = "(s._fp===true?(faded?DOWN_HEX:'#34D3E6'):(up?UP_HEX:DOWN_HEX))"
+  const fpAt = (t, k) => { const a = t.indexOf('function makeBoard_' + k + '('); const b = t.indexOf('\nconst SKELETON_', a); return [a, b < 0 ? t.length : b] }
+  const ceOf = s => { const a = s.indexOf('function buildClearEyes(s){'); const e = '\n  return box;\n}'; const b = a < 0 ? -1 : s.indexOf(e, a); return a < 0 || b < 0 ? null : s.slice(a, b + e.length) }
+  const FP_OLD_CE_D = [
+    "function buildClearEyes(s){",
+    "  if(!s||(!s.ceStep&&s.bail!==true))return null;",
+    "  var bail=(s.bail===true);",
+    "  var dead=(!bail&&s.ceStep===\"fading\"), cool=(!bail&&s.ceStep===\"cooling\"), floored=(!bail&&s.ceStep===\"floor\");",
+    "  var box=el(\"div\",\"ce\"+((bail||dead)?\" dead\":cool?\" cooling\":floored?\" floor\":\"\"));",
+    "  var hd=el(\"div\",\"ce-hd\");",
+    "  hd.appendChild(el(\"span\",\"ce-name\",\"CLEAR EYES\"));",
+    "  hd.appendChild(el(\"span\",\"ce-sub\",\"how strong it's gotten\"));",
+    "  var q=el(\"button\",\"ce-q\",\"?\");q.type=\"button\";q.setAttribute(\"aria-label\",\"What is Clear Eyes?\");q.setAttribute(\"aria-expanded\",\"false\");q.setAttribute(\"aria-controls\",\"ce-help\");",
+    "  hd.appendChild(q);box.appendChild(hd);",
+    "  var lad=el(\"div\",\"ce-lad\");",
+    "  if(bail||dead||cool||floored){",
+    "    lad.setAttribute(\"role\",\"img\");",
+    "    if(bail){lad.setAttribute(\"aria-label\",\"Rug risk — bail out\");lad.appendChild(el(\"span\",\"ce-step dead-step\",\"⚠ Rug risk\"));}",
+    "    else if(dead){lad.setAttribute(\"aria-label\",\"Faded — this coin is dead\");lad.appendChild(el(\"span\",\"ce-step dead-step\",\"Faded\"));}",
+    "    else if(cool){lad.setAttribute(\"aria-label\",\"Pulled back below the flag\");lad.appendChild(el(\"span\",\"ce-step cool-step\",\"Pulled back\"));}",
+    "    else{lad.setAttribute(\"aria-label\",\"Warning — under $15k market cap\");lad.appendChild(el(\"span\",\"ce-step floor-step\",\"⚠ Under $15k\"));}",
+    "  }else{",
+    "    var idx=(typeof s.ceStepIndex===\"number\")?s.ceStepIndex:0;",
+    "    lad.setAttribute(\"role\",\"img\");lad.setAttribute(\"aria-label\",\"Strength: \"+(CE_STEP_LABEL[s.ceStep]||s.ceStep)+\", step \"+(idx+1)+\" of 4\");",
+    "    [\"flagged\",\"heating\",\"strong\",\"confirmed\"].forEach(function(k,i){",
+    "      if(i>0)lad.appendChild(el(\"span\",\"ce-conn\"+(i<=idx?\" on\":\"\")));",
+    "      lad.appendChild(el(\"span\",\"ce-step\"+(i===idx?\" on\":\"\")+(i<idx?\" past\":\"\"),CE_STEP_LABEL[k]));",
+    "    });",
+    "  }",
+    "  box.appendChild(lad);",
+    "  if(s.ceLine)box.appendChild(el(\"div\",\"ce-line\",s.ceLine));",
+    "  var help=el(\"div\",\"ce-help\");help.hidden=true;help.id=\"ce-help\";help.setAttribute(\"role\",\"region\");help.setAttribute(\"aria-label\",\"How Clear Eyes works\");",
+    "  help.textContent=\"We watch every coin after it's flagged. As buyers and price back it, it climbs: Flagged → Early → Building → Peak. If it dies, it shows Faded.\";",
+    "  box.appendChild(help);",
+    "  q.addEventListener(\"click\",function(){var h=help.hidden;help.hidden=!h;q.setAttribute(\"aria-expanded\",h?\"true\":\"false\");});",
+    "  return box;",
+    "}"
+  ].join('\n')
+  const FP_OLD_CE_M = [
+    "function buildClearEyes(s){",
+    "  if(!s||!s.ceStep)return null;",
+    "  var dead=(s.ceStep===\"fading\"), cool=(s.ceStep===\"cooling\"), floored=(s.ceStep===\"floor\");",
+    "  var box=el(\"div\",\"ce\"+(dead?\" dead\":cool?\" cooling\":floored?\" floor\":\"\"));",
+    "  var hd=el(\"div\",\"ce-hd\");",
+    "  hd.appendChild(el(\"span\",\"ce-name\",\"CLEAR EYES\"));",
+    "  hd.appendChild(el(\"span\",\"ce-sub\",\"how strong it's gotten\"));",
+    "  var q=el(\"button\",\"ce-q\",\"?\");q.type=\"button\";q.setAttribute(\"aria-label\",\"What is Clear Eyes?\");q.setAttribute(\"aria-expanded\",\"false\");q.setAttribute(\"aria-controls\",\"ce-help\");",
+    "  hd.appendChild(q);box.appendChild(hd);",
+    "  var lad=el(\"div\",\"ce-lad\");",
+    "  if(dead||cool||floored){",
+    "    lad.setAttribute(\"role\",\"img\");",
+    "    if(dead){lad.setAttribute(\"aria-label\",\"Faded — this coin is dead\");lad.appendChild(el(\"span\",\"ce-step dead-step\",\"Faded\"));}",
+    "    else if(cool){lad.setAttribute(\"aria-label\",\"Pulled back below the flag\");lad.appendChild(el(\"span\",\"ce-step cool-step\",\"Pulled back\"));}",
+    "    else{lad.setAttribute(\"aria-label\",\"Warning — under $15k market cap\");lad.appendChild(el(\"span\",\"ce-step floor-step\",\"⚠ Under $15k\"));}",
+    "  }else{",
+    "    var idx=(typeof s.ceStepIndex===\"number\")?s.ceStepIndex:0;",
+    "    lad.setAttribute(\"role\",\"img\");lad.setAttribute(\"aria-label\",\"Strength: \"+(CE_STEP_LABEL[s.ceStep]||s.ceStep)+\", step \"+(idx+1)+\" of 4\");",
+    "    [\"flagged\",\"heating\",\"strong\",\"confirmed\"].forEach(function(k,i){",
+    "      if(i>0)lad.appendChild(el(\"span\",\"ce-conn\"+(i<=idx?\" on\":\"\")));",
+    "      lad.appendChild(el(\"span\",\"ce-step\"+(i===idx?\" on\":\"\")+(i<idx?\" past\":\"\"),CE_STEP_LABEL[k]));",
+    "    });",
+    "  }",
+    "  box.appendChild(lad);",
+    "  if(s.ceLine)box.appendChild(el(\"div\",\"ce-line\",s.ceLine));",
+    "  var help=el(\"div\",\"ce-help\");help.hidden=true;help.id=\"ce-help\";help.setAttribute(\"role\",\"region\");help.setAttribute(\"aria-label\",\"How Clear Eyes works\");",
+    "  help.textContent=\"We watch every coin after it's flagged. As buyers and price back it, it climbs: Flagged → Early → Building → Peak. If it dies, it shows Faded.\";",
+    "  box.appendChild(help);",
+    "  q.addEventListener(\"click\",function(){var h=help.hidden;help.hidden=!h;q.setAttribute(\"aria-expanded\",h?\"true\":\"false\");});",
+    "  return box;",
+    "}"
+  ].join('\n')
+  const GCE = ceOf(ep.slice(...fpAt(ep, 'd_gated')))
+  ok(GCE && GCE === ceOf(ep.slice(...fpAt(ep, 'm_gated'))) && GCE.includes('early=(!bail&&s.ceStep==="early")') && GCE.includes('lad.appendChild(el("span","ce-step early-step","Early"));') &&
+    GCE.includes('lad.appendChild(el("span","ce-step dead-step","⚠ Rug risk"));') && GCE.includes('Flagged → Early → Building → Peak.') && !GCE.includes('/*'),
+    'gated boards: one Clear Eyes function (computer = phone) with the Early and Rug risk states, the website words, no comment')
+  for (const k of ['d_free', 'm_free']) {
+    const s = ep.slice(...fpAt(ep, k))
+    ok(ceOf(s) === GCE && s.split('function buildClearEyes(s){').length === 2 && s.split('buildClearEyes(').length === 3 && s.includes('if(s&&s._fp){var _cebox=buildClearEyes(s);if(_cebox)modal.appendChild(_cebox);}'),
+      k + ': the pick pop-up\'s Clear Eyes = the gated function byte for byte (Early + Rug risk states), still built only for s._fp')
+    ok(s.split(FP_CH + ',false);sp.setAttribute("class","spark-bg");card.appendChild(sp);').length === 2 && s.split(FP_CH + ',true));').length === 2 &&
+      s.split("s._fp===true?(faded?DOWN_HEX:'#34D3E6')").length === 3 && !s.includes('up?UP_HEX:DOWN_HEX,false)') && !s.includes('up?UP_HEX:DOWN_HEX,true)'),
+      k + ': the gated chart colour (cyan, DOWN_HEX when done) only for the pick, once on the card + once in the pop-up; every other card keeps the free colour')
+  }
+  for (const k of ['d_gated', 'm_gated']) {
+    const s = ep.slice(...fpAt(ep, k))
+    ok(!s.includes('s._fp') && s.split("faded?DOWN_HEX:'#34D3E6',false)").length === 2 && s.split("faded?DOWN_HEX:'#34D3E6',true))").length === 2, k + ': the gated board keeps its own chart colour; no pick code')
+  }
+  let ep0 = ep
+  for (const [k, old] of [['d_free', FP_OLD_CE_D], ['m_free', FP_OLD_CE_M]]) {
+    const [a, b] = fpAt(ep0, k); const s = ep0.slice(a, b)
+    ep0 = ep0.slice(0, a) + s.split(FP_CH).join('up?UP_HEX:DOWN_HEX').split(GCE).join(old) + ep0.slice(b)
+  }
+  ok(ep.split(FP_CH).length === 5 && ep.split(GCE).length === 5, 'the pick swaps: the chart colour 4 times (card + pop-up on the 2 free boards), the gated Clear Eyes 4 times (2 gated + 2 free boards)')
+  ok(crypto.createHash('md5').update(ep0).digest('hex') === 'e21f6ebbbb2a0c7fc480b31c5f4f963c', 'engine_parts.js = the previous engines except the free pick look (the gated boards and every other free part byte for byte)')
   // nothing else changed: putting the 3 entries back gives the previous engines (md5 1c889a32) exactly
   const C_NEW = '\n' + CLIMB + ',\n'; const C_OLD = C_NEW + CALLER + ',\n' + FLASH + ',\n'
   const S_NEW = '\n' + REALV + '\n];'; const S_OLD = '\n' + REALV + ',\n' + SIGS + '\n];'
-  ok(ep.split(C_NEW).length === 5 && ep.split(S_NEW).length === 5 && ep.split(S_OLD).length === 1, 'the 2 cut points appear exactly 4 times each (the 4 boards)')
-  const prev = ep.split(C_NEW).join(C_OLD).split(S_NEW).join(S_OLD)
+  // (run on ep0 = the engines before the free pick look, proven above)
+  ok(ep0.split(C_NEW).length === 5 && ep0.split(S_NEW).length === 5 && ep0.split(S_OLD).length === 1, 'the 2 cut points appear exactly 4 times each (the 4 boards)')
+  const prev = ep0.split(C_NEW).join(C_OLD).split(S_NEW).join(S_OLD)
   ok(crypto.createHash('md5').update(prev).digest('hex') === '1c889a32430e40a635ca75aa421b630f', 'engine_parts.js = the previous engines except the 3 More entries')
   // and before that: swapping the two free LEAD entries back gives the engines before that swap (md5 070536c5) exactly
   const NEW = '\n' + DEX + ',\n' + LOW + '\n];'; const OLD = '\n' + LOW + ',\n' + DEX + '\n];'
@@ -837,8 +935,14 @@ ok(/area: 'routes', data: \{ path: ROUTE \}, render: \(\) => h\(PageBoard\)/.tes
   // the swaps are done in the generator (exact, counted text swaps): the LEAD swap only for the 2 free boards' main board
   // script, the More cut for all 4 boards' main board script
   const ge = fs.readFileSync(path.join(genDir, 'gen_engine.py'), 'utf8')
-  ok(ge.includes('("d_free", 3): _SRV_STRENGTH_SUBS + _FREE_LEAD_SWAP + _NO_DATA_CHIPS,') && ge.includes('("m_free", 3): _SRV_STRENGTH_SUBS + _FREE_LEAD_SWAP + _NO_DATA_CHIPS,') &&
+  ok(ge.includes('("d_free", 3): _FP_GATED_LOOK["d_free"] + _SRV_STRENGTH_SUBS + _FREE_LEAD_SWAP + _NO_DATA_CHIPS,') && ge.includes('("m_free", 3): _FP_GATED_LOOK["m_free"] + _SRV_STRENGTH_SUBS + _FREE_LEAD_SWAP + _NO_DATA_CHIPS,') &&
     ge.split('_FREE_LEAD_SWAP').length === 4, 'gen_engine.py: _FREE_LEAD_SWAP on d_free #3 + m_free #3 only')
+  // the free pick look: 3 counted swaps (count 1 each), on the 2 free boards' main board script only, FIRST in their list (the
+  // website's strength-word swap then runs on the swapped-in gated Clear Eyes function, as on the gated boards)
+  ok(ge.split('_FP_GATED_LOOK').length === 4 && ge.includes('_FP_GATED_LOOK = {"d_free": _fp_gated_look(_FREE_CE_D), "m_free": _fp_gated_look(_FREE_CE_M)}\n') &&
+    ge.includes('_FP_CHART = "' + FP_CH + '"\n') && ge.includes('    return [("up?UP_HEX:DOWN_HEX,false);sp.setAttribute", _FP_CHART + ",false);sp.setAttribute", 1),') &&
+    ge.includes('            ("up?UP_HEX:DOWN_HEX,true));", _FP_CHART + ",true));", 1),') && ge.includes('            (free_ce, _GATED_CE, 1)]') &&
+    ge.split('_fp_gated_look(').length === 4, 'gen_engine.py: _FP_GATED_LOOK = the card chart, the pop-up chart and the Clear Eyes function, count 1 each, d_free #3 + m_free #3 only')
   ok(ge.includes('("d_gated", 4): _SRV_STRENGTH_SUBS + _CHIP_SUB + _NO_DATA_CHIPS,') && ge.includes('("m_gated", 2): _SRV_STRENGTH_SUBS + _CHIP_SUB + _NO_DATA_CHIPS,') &&
     ge.split('_NO_DATA_CHIPS').length === 6, 'gen_engine.py: _NO_DATA_CHIPS on all 4 boards\' main board script')
   // a filter state from an older version that still holds caller / flash / signals (the panel carries the last filters
@@ -1677,8 +1781,9 @@ ok(JSON.stringify(m.CE_LABEL) === JSON.stringify({ flagged: 'Flagged', heating: 
 // the old local "404"; with it ON: the shims, the img guard, the reveal / featured / Missed / Free Pick answers, the
 // history merge and its ONE report.
 {
-  const extra = '\nexport { guardImg, imgData, imgs, histMerge, awayReport, histReport, histDue, histAfter, rwHist, bannerList, featuredList, isDataImg, makeEnv, HERMES_LIVE, LIVE_COINS_NOTE, paintBanners, openFeatured, FEAT_CSS, FEAT_LINK_RE, shared, toasts, MISSED_IMG_RE, quoteName, showWatch }\n'
-  const head = 'const FACTORY_PARAMS = ["fetch", "window", "document"]; const BOARDS = {}; const FONTS_CSS = ""; const T = globalThis.__T; const h = (...a) => T.h ? T.h(...a) : null; const host = T.host; const useQuery = () => ({}); const useEffect = (f, d) => T.eff ? T.eff(f, d) : undefined; const useMemo = f => f(); const useRef = () => ({}); const useState = v => T.st ? T.st(v) : [v, () => {}];\n'
+  const extra = '\nexport { guardImg, imgData, imgs, histMerge, awayReport, histReport, histDue, histAfter, rwHist, bannerList, featuredList, isDataImg, makeEnv, HERMES_LIVE, LIVE_COINS_NOTE, paintBanners, openFeatured, FEAT_CSS, FEAT_LINK_RE, shared, toasts, MISSED_IMG_RE, quoteName, showWatch, ' +
+    'FREE_FEATURED_LIVE, NEW_POLL_MS, freeFeatRow, freeFeatShow, featStale, FREE_FC_RULES, FREE_FC_CSS, PENDING_MS, useRest }\n'
+  const head = 'const FACTORY_PARAMS = ["fetch", "window", "document"]; const BOARDS = {}; const FONTS_CSS = ""; const T = globalThis.__T; const h = (...a) => T.h ? T.h(...a) : null; const host = T.host; const useQuery = o => T.uq ? T.uq(o) : ({}); const useEffect = (f, d) => T.eff ? T.eff(f, d) : undefined; const useMemo = f => f(); const useRef = () => ({}); const useState = v => T.st ? T.st(v) : [v, () => {}];\n'
   const srcText = fs.readFileSync(path.join(genDir, 'plugin.src.js'), 'utf8')
   ok(srcText.split('\nconst HERMES_LIVE = true\n').length === 2, 'the gate ships ON (exactly one HERMES_LIVE = true)')
   ok(built.split('\nconst HERMES_LIVE = true\n').length === 2, 'the built plugin.js ships the gate ON')
@@ -1734,7 +1839,8 @@ ok(JSON.stringify(m.CE_LABEL) === JSON.stringify({ flagged: 'Flagged', heating: 
   ok(calls.ext.pop() === 'https://piquesignal.xyz/featured', 'gate off: /featured opens the website (as before)')
   // every call to a new backend route sits behind the gate in the source
   for (const l of srcText.split('\n')) {
-    if (/useRest\('(missed|free-pick|banners|featured)/.test(l)) ok(/HERMES_LIVE \? useRest\(/.test(l), 'new useRest gated: ' + l.trim().slice(0, 60))
+    // (the free boards' keyless Featured list sits behind BOTH switches: HERMES_LIVE and its own FREE_FEATURED_LIVE)
+    if (/useRest\('(missed|free-pick|banners|featured)/.test(l)) ok(/useRest\('featured-free'/.test(l) ? /HERMES_LIVE && FREE_FEATURED_LIVE \? useRest\(/.test(l) : /HERMES_LIVE \? useRest\(/.test(l), 'new useRest gated: ' + l.trim().slice(0, 60))
     if (/'\/reveal'/.test(l) && !/^\s*\/\//.test(l)) ok(/HERMES_LIVE/.test(l), 'reveal gated')
   }
   ok(/const due = HERMES_LIVE && /.test(srcText) && srcText.split("CTX.rest('/history?view=").length === 2, 'history asked only when due (gated)')
@@ -1984,6 +2090,34 @@ ok(JSON.stringify(m.CE_LABEL) === JSON.stringify({ flagged: 'Flagged', heating: 
       ob.ls.click[0](ev())
       ok(opened.length === 1 && opened[0] === A && r2.querySelector('.pqs-feat') === null, 'featured: Open on board opens that coin (member board)')
       ok(typeof close === 'function', 'featured: returns its close')
+      // Featured Callers on the FREE boards (behind FREE_FEATURED_LIVE, shipped ON): the link row (website markup,
+      // text only), shown only with callers; the free list's pop-up is tagged with its view, survives a free refresh, and
+      // closes on another view or on a member board without a working key
+      {
+        ok(on.FREE_FEATURED_LIVE === true && off.FREE_FEATURED_LIVE === true, 'free featured: the switch ships ON (the off copy flips HERMES_LIVE only; both are needed)')
+        ok(on.NEW_POLL_MS.featuredFree === 60000 && on.NEW_POLL_MS.featured === 300000, 'free featured: at most once a minute (the member list keeps its own pace)')
+        const row = on.freeFeatRow()
+        const fa = row.querySelector('.fclink')
+        ok(row.tagName === 'DIV' && row.className === 'fclink-row' && row.children.length === 1 && fa && fa.tagName === 'A' && fa.attrs.href === '/featured' &&
+          fa.attrs['aria-label'] === 'Featured Callers' && Object.keys(fa.attrs).sort().join() === 'aria-label,href', 'free featured: div.fclink-row > a.fclink[href=/featured][aria-label] (the website markup), nothing else')
+        ok(fa.textContent === 'Featured Callers →' && fa.children.length === 1 && fa.children[0].tagName === 'SPAN' && fa.children[0].className === 'arw' && fa.children[0].textContent === '→', 'free featured: fixed words as text + span.arw')
+        ok(row.hidden === true && fa.hidden === true, 'free featured: the row and the link start hidden')
+        on.freeFeatShow(fa, true); ok(row.hidden === false && fa.hidden === false, 'free featured: callers -> the link shows')
+        on.freeFeatShow(fa, false); ok(row.hidden === true && fa.hidden === true, 'free featured: no callers -> the row and the link hidden (no gap)')
+        const [r3] = mkRoot()
+        const fopened = []
+        on.openFeatured(r3, [{ name: 'Free caller', calls: [{ symbol: 'POP', mint: A }] }], m => fopened.push(m))
+        const fov = r3.querySelector('.pqs-feat'); fov.setAttribute('data-pqs-view', 'free')
+        for (const mo of [false, true, null]) ok(on.featStale(fov, 'free', mo) === false, 'free featured: a free pop-up survives a data refresh (memberOk ' + mo + ')')
+        ok(on.featStale(fov, 'gated', true) === true && on.featStale(fov, 'gated', false) === true, 'free featured: a free pop-up never stays on the member board')
+        const gov = new FEl('div'); gov.setAttribute('data-pqs-view', 'gated')
+        ok(on.featStale(gov, 'gated', true) === false && on.featStale(gov, 'gated', false) === true && on.featStale(gov, 'gated', null) === true && on.featStale(gov, 'free', true) === true,
+          'member pop-up: stays only on the member board with a working key (as before)')
+        ok(on.featStale(new FEl('div'), 'free', true) === true && on.featStale(new FEl('div'), 'gated', true) === true && on.featStale(null, 'free', false) === false,
+          'a pop-up without a view tag always closes; nothing open = nothing to close')
+        r3.querySelector('.pqs-feat').all().filter(e => e.className === 'fbtn').pop().ls.click[0](ev())
+        ok(fopened.length === 1 && fopened[0] === A && r3.querySelector('.pqs-feat') === null, 'free featured: Open on board hands that coin to the member-board route (the website caller page) and closes')
+      }
     } finally { globalThis.window.document = savedDoc }
     // the Board wires them from live data: banners on the free boards only, the Featured link only with callers
     ok(/paintBanners\(root, gated \? \[\] : bannerList\(bannersQ && bannersQ\.data\), timers\)/.test(srcText), 'Board: banners painted from /banners, free boards only')
@@ -2022,6 +2156,65 @@ ok(JSON.stringify(m.CE_LABEL) === JSON.stringify({ flagged: 'Flagged', heating: 
       ok(on.FEAT_LINK_RE.test('https://pump.fun/coin/' + A) && !on.FEAT_LINK_RE.test('http://pump.fun/coin/' + A) && !on.FEAT_LINK_RE.test('https://pump.fun/coin/' + A + '/x') && !on.FEAT_LINK_RE.test('https://evil.com/solana/' + A) && !on.FEAT_LINK_RE.test('https://dexscreener.com/solana/javascript:1'), 'featured: coin-site links = https + fixed hosts + a mint only')
       ok(/openFeatured\(root, list, m => route\(SITE \+ '\/gated#coin=' \+ m, v => setView\(v\)\), u => route\(u, v => setView\(v\)\)\)/.test(srcText), 'Board: the pop-up\'s links open through route() (https only), coins on the member board')
       ok(/if \(viewRef\.current !== 'gated' \|\| !engine\.current\.hasKey/.test(srcText), 'Board: the Featured view stays member-only (gated + key)')
+    }
+    // Featured Callers on the FREE boards: ONE switch with core.py (shipped ON), its own keyless route + list, kept apart
+    // from the member path (the member rules above are unchanged; only a free branch is added)
+    {
+      const ffCore = [...corePy.matchAll(/^FREE_FEATURED_LIVE = (True|False)\s*$/gm)].map(x => x[1])
+      ok(srcText.split('\nconst FREE_FEATURED_LIVE = true\n').length === 2 && built.split('\nconst FREE_FEATURED_LIVE = true\n').length === 2 && !/FREE_FEATURED_LIVE\s*=\s*false/.test(srcText + built),
+        'FREE_FEATURED_LIVE = true once in plugin.src.js and plugin.js (shipped ON)')
+      ok(ffCore.length === 1 && ffCore[0] === 'True', 'core.py FREE_FEATURED_LIVE = True, exactly once (shipped ON)')
+      // the hook as the Board calls it: the free view polls /featured-free (at most once a minute), the member view never does
+      {
+        const uq = []; globalThis.__T.uq = o => { uq.push(o); return {} }
+        try { for (const gated of [false, true]) on.useRest('featured-free', '/featured-free', on.NEW_POLL_MS.featuredFree, !gated) } finally { delete globalThis.__T.uq }
+        ok(uq.length === 2 && uq.every(o => o.queryKey[1] === 'featured-free' && o.refetchInterval === 60000 && o.retry === false) && uq[0].enabled === true && uq[1].enabled === false,
+          'free featured: the free view polls /featured-free once a minute; the member view does not (enabled = !gated)')
+      }
+      ok(ffCore.length === 1 && (ffCore[0] === 'True') === on.FREE_FEATURED_LIVE, 'core.py FREE_FEATURED_LIVE matches the pane (one switch)')
+      ok(srcText.includes("  const featFreeQ = HERMES_LIVE && FREE_FEATURED_LIVE ? useRest('featured-free', '/featured-free', NEW_POLL_MS.featuredFree, !gated) : null\n") &&
+        srcText.split("'/featured-free'").length === 2 && srcText.split("useRest('featured-free'").length === 2, 'free featured: ONE keyless /featured-free hook, behind both switches, free boards only')
+      ok(srcText.includes("    engine.current.featured = gated && memberOk ? featuredList(featQ && featQ.data) : []\n    engine.current.featuredFree = !gated ? featuredList(featFreeQ && featFreeQ.data) : []\n"),
+        'free featured: a SEPARATE field; the member field unchanged')
+      const envSrc = srcText.slice(srcText.indexOf('function makeEnv ('), srcText.indexOf('// Early Edge rows (backend /early-edge'))
+      ok(envSrc.length > 3000 && !/featuredFree|featured-free/.test(envSrc) && srcText.includes('getFeatured: () => engine.current.featured,') &&
+        envSrc.includes("if (p === '/api/app2/featured-callers') {\n        const c = getFeatured ? getFeatured() : null\n        return Promise.resolve(getHasKey() === true ? resp(true, 200, { callers: Array.isArray(c) ? c : [] }) : resp(false, 404, null))"),
+      'the website fetch stand-in still serves ONLY the member list, ONLY with a key')
+      const fb = srcText.slice(srcText.indexOf("      if (view === 'free' && viewRef.current === 'free') {"), srcText.indexOf('      const list = engine.current.featured\n'))
+      ok(fb.length > 200 && fb.includes('const fl = engine.current.featuredFree') && !/engine\.current\.featured(?!Free)|hasKey|memberOk|CTX|getFeatured/.test(fb) && fb.includes('if (!HERMES_LIVE || !FREE_FEATURED_LIVE || !Array.isArray(fl) || !fl.length) return false') &&
+        fb.includes("openFeatured(root, fl, m => route(SITE + '/gated#coin=' + m, v => setView(v)), u => route(u, v => setView(v)))") && fb.includes("featTag('free')"),
+      'onFeatured, free branch: only the keyless list, behind both switches, no member data or action; Open on board = the member board')
+      ok(srcText.includes("      openFeatured(root, list, m => route(SITE + '/gated#coin=' + m, v => setView(v)), u => route(u, v => setView(v)))\n      featTag('gated')\n      return true\n"), 'onFeatured, member branch: as before + its view tag')
+      ok(srcText.includes("    if (HERMES_LIVE && FREE_FEATURED_LIVE && !gated && hrow.parentNode) hrow.parentNode.insertBefore(freeFeatRow(), hrow.nextSibling)\n") && srcText.split('freeFeatRow()').length === 2,
+        'free featured: the link row goes right under the Hermes row, free boards only, behind both switches')
+      ok(srcText.includes('    const a = root.querySelector(\'.fclink\'); if (a && gated) a.hidden = !(gated && memberOk && engine.current.featured.length > 0)\n    if (a && !gated) freeFeatShow(a, engine.current.featuredFree.length > 0)\n') &&
+        srcText.includes("    if (featStale(root.querySelector('.pqs-feat'), view, memberOk)) popZGone(root.querySelector('.pqs-feat'))\n") && srcText.includes('  }, [key, memberOk, featQ && featQ.data, featFreeQ && featFreeQ.data])\n') &&
+        !srcText.includes('if (!(gated && memberOk)) popZGone('), 'the Featured effect: each view\'s own list decides its link; a free refresh never closes the pop-up (featStale); the free data in its deps')
+      ok(srcText.split("h('style', null, FREE_FC_CSS)").length === 2 && srcText.includes("    HERMES_LIVE && FREE_FEATURED_LIVE && !gated ? h('style', null, FREE_FC_CSS) : null,") &&
+        built.split("HERMES_LIVE && FREE_FEATURED_LIVE && !gated ? h('style', null, FREE_FC_CSS) : null,").length === 2 && built.indexOf("h('style', null, FREE_FC_CSS)") > built.indexOf("h('style', null, css)"),
+      'free featured css: one style tag, free boards only, behind both switches, after the website css (source + built)')
+      const fr = [...on.FREE_FC_CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      const dg = fs.readFileSync(path.join(genDir, 'd_gated.css'), 'utf8')
+      ok(fr.length === 6 && on.FREE_FC_CSS.replace(/([^{}]+)\{([^{}]*)\}/g, '') === '' && !/[@<!]|important|:has\(|:not\(|#pqs-blue|pqs-gated/i.test(on.FREE_FC_CSS), 'free featured css: 6 plain rules, never a member board')
+      ok(fr.every((r, i) => r[1] === ['d', 'm'].map(b => '.pqs-' + b + '.pqs-free ' + on.FREE_FC_RULES[i].slice(0, on.FREE_FC_RULES[i].indexOf('{'))).join(',')), 'free featured css: every rule fenced to the computer + phone free boards')
+      ok(on.FREE_FC_RULES.slice(0, 4).every(r => dg.split('.pqs-d.pqs-gated ' + r + '\n').length === 2), 'free featured css: the website\'s 4 .fclink rules byte for byte (= d_gated.css)')
+      ok(on.FREE_FC_RULES.slice(4).join('') === '.fclink-row[hidden]{display:none}.fclink[hidden]{display:none}', 'free featured css: + [hidden] = not drawn')
+      // "Open on board" from a free list without a key: the member board shows its locked state (no rows), the waiting coin
+      // is dropped after 30 s, nothing member is shown
+      ok(on.PENDING_MS === 30000 && srcText.includes('      if (Date.now() - pe.at > PENDING_MS) shared.pending = null\n') &&
+        srcText.includes("getRows: () => (viewRef.current === 'gated' && !engine.current.hasKey) ? [] :") && srcText.includes('        if (!engine.current.rows.length) return false\n'),
+      'free featured: Open on board without a key = the locked member board, the waiting coin expires (30 s)')
+      // the shipped copy (switch on): the website's own featured call still never serves the free list
+      ok(src.split('\nconst FREE_FEATURED_LIVE = true\n').length === 2, 'the test copy carries the shipped free featured switch (on) once')
+      const ffOn = await load('_src_ffon.mjs', src)
+      ok(ffOn.FREE_FEATURED_LIVE === true && ffOn.HERMES_LIVE === true, 'a switched-on copy loads')
+      // its own kill switch (that one line back to false) still loads
+      const ffOff = await load('_src_ffoff.mjs', src.replace('\nconst FREE_FEATURED_LIVE = true\n', '\nconst FREE_FEATURED_LIVE = false\n'))
+      ok(ffOff.FREE_FEATURED_LIVE === false && ffOff.HERMES_LIVE === true, 'a switched-off copy (its kill switch) loads')
+      ffOn.__setCtx(fakeCtx)
+      const [ffF] = mkEnv(ffOn, opts(false)).args
+      const ffR = await ffF('/api/app2/featured-callers')
+      ok(ffR.ok === false && ffR.status === 404, 'switch on: the website featured call still answers 404 without a key')
     }
   }
 
@@ -3853,6 +4046,28 @@ ok(JSON.stringify(m.CE_LABEL) === JSON.stringify({ flagged: 'Flagged', heating: 
     src0.split("className: (phone ? 'pqs-m' : 'pqs-d')").length === 2 && src0.includes("const scrollStyle = { position: 'absolute', inset: 0, overflowY: 'auto', overflowX: 'hidden' }"),
     'footer bg: the board root sits right inside the scroll area (its parent), the only board root; the scroll area keeps its layout style (no inline background to fight)')
   ok(crypto.createHash('md5').update(m.BLUE_CSS).digest('hex') === 'b993151c205e80ac7abd4be6b1236330' && !m.BLUE_CSS.includes(':has('), 'footer bg: the blue layers unchanged (BLUE_CSS md5 b993151c)')
+}
+// the free live pick pop-up's gated Clear Eyes states (FP_CE_CSS; the box itself = gen_engine.py _FP_GATED_LOOK): exactly the 4
+// gated sheet rules the free sheets lack, byte for byte, fenced to the gold pop-up (.modal.fp) on the computer + phone free
+// boards; no fill, no blue, no frost (gold wins); mounted on the free boards only, after the website css
+{
+  const fc = m.FP_CE_CSS
+  const rules = typeof fc === 'string' ? [...fc.matchAll(/([^{}]+)\{([^{}]*)\}/g)] : []
+  ok(rules.length === 4 && fc.replace(/([^{}]+)\{([^{}]*)\}/g, '') === '' && !/[@<!]/.test(fc) && !/important/i.test(fc), 'pick Clear Eyes css: 4 plain rules, no @-rule, no !important, no <')
+  const PICK = ['.ce.dead', '.ce.cooling', '.ce-step.early-step', '.ce-q:focus-visible']
+  ok(rules.every((r, i) => r[1] === ['d', 'm'].map(b => '.pqs-' + b + '.pqs-free .modal.fp ' + PICK[i]).join(',')), 'pick Clear Eyes css: every selector = a free board root (computer, phone) + the gold pop-up (.modal.fp) + the part')
+  ok(rules.map(r => r[2]).join('|') === 'border-color:rgba(255,80,95,.3)|border-color:rgba(224,163,74,.32)|color:var(--up);border-color:var(--up);background:var(--bg)|outline:2px solid var(--accent);outline-offset:2px',
+    'pick Clear Eyes css: the dead + pulled-back outlines, the Early pill, the ? focus ring; nothing else')
+  for (const b of ['d', 'm']) {
+    const g = fs.readFileSync(path.join(genDir, b + '_gated.css'), 'utf8'); const f = fs.readFileSync(path.join(genDir, b + '_free.css'), 'utf8')
+    ok(PICK.every((p, i) => g.split('.pqs-' + b + '.pqs-gated ' + p + '{' + rules[i][2] + '}').length === 2 && !f.includes(' ' + p + '{') && !f.includes(' ' + p + ',')),
+      b + ': each rule = the ' + b + '_gated.css rule byte for byte, and the ' + b + '_free.css sheet has no rule of its own for it')
+  }
+  ok(!/#0847C4|#0000F2|8,\s*71,\s*196|0,\s*0,\s*242|frost|gradient|background-image|:not\(|:has\(|#pqs-blue/i.test(fc), 'pick Clear Eyes css: no blue, no frost, no fill image')
+  ok(!/\.modal(?!\.fp)|\.tk|\.pqs-gated/.test(fc), 'pick Clear Eyes css: never another pop-up, a card or a gated board')
+  ok((src0.match(/const FP_CE_CSS = /g) || []).length === 1 && src0.split("h('style', null, FP_CE_CSS)").length === 2 && src0.includes("    gated ? null : h('style', null, FP_CE_CSS),") &&
+    built.split("gated ? null : h('style', null, FP_CE_CSS),").length === 2, 'pick Clear Eyes css: one style tag, free boards only, in the source and the built plugin.js')
+  ok(built.indexOf("h('style', null, FP_CE_CSS)") > built.indexOf("h('style', null, css)"), 'pick Clear Eyes css: placed after the website css')
 }
 // a rebuilt board leaves no font listener / animation frame behind; member rows leave the chat coin cards once the
 // key is gone, refused or replaced, also with no board open; no "reconnecting" next to "needs your key"

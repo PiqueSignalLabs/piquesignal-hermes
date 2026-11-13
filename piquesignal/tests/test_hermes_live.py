@@ -13,6 +13,7 @@ import inspect
 import json
 import textwrap
 import math
+import re
 import sys
 import types
 import unittest
@@ -58,13 +59,16 @@ api = _load("t5_plugin_api", PLUGIN / "dashboard" / "plugin_api.py")
 core = api.core
 fc = core.fc
 hc = fc._hermes
-NEW_URLS = (fc.MISSED_URL, fc.FREE_PICK_URL, fc.BANNERS_URL, fc.FREE_HISTORY_URL, fc.FEATURED_URL, fc.HISTORY_URL)
+NEW_URLS = (fc.MISSED_URL, fc.FREE_PICK_URL, fc.BANNERS_URL, fc.FREE_HISTORY_URL, fc.FEATURED_URL, fc.HISTORY_URL,
+            fc.FREE_FEATURED_URL)
 SHIPPED = core.HERMES_LIVE        # the switch as this release ships it (restored after every test: core is shared)
+SHIPPED_FF = core.FREE_FEATURED_LIVE   # the free boards' Featured Callers switch as shipped (ON: the server route is live)
 KEYLESS = ("/api/free-board/",)
 # The shipped module state this file swaps for fakes (core is shared by every test file): put back by tearDownModule, so
 # the next file starts from the real module-level clients, transport and switch, not from these test doubles.
 _SHIPPED_STATE = {n: getattr(core, n) for n in ("HERMES_LIVE", "_TRANSPORT", "_missed", "_free_pick", "_banners",
-                                                "_free_history", "_images", "_reveal")}
+                                                "_free_history", "_images", "_reveal", "FREE_FEATURED_LIVE",
+                                                "_featured_free")}
 
 
 def tearDownModule():
@@ -122,11 +126,14 @@ class Base(unittest.TestCase):
         core._members.clear()
         core._refusal_hold.clear()
         core.HERMES_LIVE = False
+        core.FREE_FEATURED_LIVE = SHIPPED_FF
         _secret["value"] = None
         kw = dict(clock=self.clock, rand=lambda: 0.0, **core._NEW_PATH)
         core._missed = fc.FeedClient(core._transport, url=fc.MISSED_URL, parse=fc.parse_missed, min_interval_s=30, **kw)
         core._free_pick = fc.FeedClient(core._transport, url=fc.FREE_PICK_URL, parse=fc.parse_free_pick, min_interval_s=30, **kw)
         core._banners = fc.FeedClient(core._transport, url=fc.BANNERS_URL, parse=fc.parse_banners, min_interval_s=300, **kw)
+        core._featured_free = fc.FeedClient(core._transport, url=fc.FREE_FEATURED_URL, parse=fc.parse_free_featured,
+                                            min_interval_s=60, **kw)
         core._free_history = fc.FeedClient(core._transport, url=fc.FREE_HISTORY_URL, parse=core._parse_free_history,
                                            min_interval_s=core._HISTORY_EVERY_S, gone_on_404=True,
                                            max_bytes=fc.HISTORY_MAX_BYTES, **kw)
@@ -136,6 +143,7 @@ class Base(unittest.TestCase):
 
     def tearDown(self):
         core.HERMES_LIVE = SHIPPED    # never leak the kill-switch value into later test files (one shared core)
+        core.FREE_FEATURED_LIVE = SHIPPED_FF
         _secret["value"] = None
 
     def live(self):
@@ -172,6 +180,18 @@ class GateTests(Base):
         self.assertEqual(built.count("\nconst HERMES_LIVE = true\n"), 1)
         self.assertEqual(built.count("\nconst HERMES_LIVE = false\n"), 0)
 
+    def test_free_featured_ships_on_one_switch(self):
+        """Featured Callers on the free board ships ON (the server route is installed and public): core.py, plugin.src.js
+        and the built plugin.js carry FREE_FEATURED_LIVE once, all three ON (a release with them apart fails here)."""
+        self.assertIs(SHIPPED_FF, True)
+        src = (PLUGIN / "core.py").read_text(encoding="utf-8")
+        self.assertEqual(src.count("\nFREE_FEATURED_LIVE = True\n"), 1)
+        self.assertEqual(src.count("\nFREE_FEATURED_LIVE = False\n"), 0)
+        for path in (PLUGIN.parent / "gen" / "plugin.src.js", PLUGIN / "desktop" / "plugin.js"):
+            js = path.read_text(encoding="utf-8")
+            self.assertEqual(js.count("\nconst FREE_FEATURED_LIVE = true\n"), 1, path.name)
+            self.assertEqual(js.count("\nconst FREE_FEATURED_LIVE = false\n"), 0, path.name)
+
     def test_shipped_switch_asks_the_new_addresses(self):
         """As shipped (no test override): every keyless part and Featured Callers really ask their fixed address, with
         the plugin UA, no query string, the key only on the keyed one, and the live pacing (featured + history + reveal
@@ -183,16 +203,23 @@ class GateTests(Base):
         self.net.replies[fc.BANNERS_URL] = jr(BANNERS)
         self.net.replies[fc.ME_URL] = jr({"daily_limit": 1000})
         self.net.replies[fc.FEATURED_URL] = jr(FEATURED)
+        self.net.replies[fc.FREE_FEATURED_URL] = jr(FEATURED)
+        core.FREE_FEATURED_LIVE = SHIPPED_FF
         self.assertEqual(core.missed()["state"], "fresh")
         self.assertEqual(core.free_pick()["state"], "fresh")
         self.assertEqual(core.banners()["state"], "fresh")
+        self.assertEqual(core.featured_free()["state"], "fresh")        # shipped ON: the free board's Featured is asked
         core.featured()
         self.member_entry()
         self.clock.t += 1
         self.assertEqual(core.featured()["state"], "fresh")
         urls = [c[0] for c in self.net.calls]
-        for u in (fc.MISSED_URL, fc.FREE_PICK_URL, fc.BANNERS_URL, fc.ME_URL, fc.FEATURED_URL):
+        for u in (fc.MISSED_URL, fc.FREE_PICK_URL, fc.BANNERS_URL, fc.ME_URL, fc.FEATURED_URL, fc.FREE_FEATURED_URL):
             self.assertIn(u, urls)
+        self.assertEqual(urls.count(fc.FREE_FEATURED_URL), 1)
+        ff_headers = [h for u, h, _c in self.net.calls if u == fc.FREE_FEATURED_URL][0]
+        self.assertEqual(ff_headers, {"User-Agent": fc.USER_AGENT, "Accept": "application/json"})   # never the key
+        self.assertFalse(any(KEY in str(v) for v in ff_headers.values()))
         for url, headers, _cap in self.net.calls:
             self.assertEqual(headers["User-Agent"], fc.USER_AGENT)
             self.assertNotIn("?", url)
@@ -202,8 +229,10 @@ class GateTests(Base):
         self.assertEqual(entry["history"]._min, max(1200.0, 6 * 288.0))
 
     def test_no_new_path_is_ever_requested(self):
-        """The kill switch (HERMES_LIVE = False, set by setUp): nothing new is asked, not even /me."""
+        """The kill switch (HERMES_LIVE = False, set by setUp): nothing new is asked, not even /me (and the free board's
+        Featured Callers stays off even with its own switch on: both are needed)."""
         _secret["value"] = KEY
+        core.FREE_FEATURED_LIVE = True
         for url in NEW_URLS:
             self.net.replies[url] = jr({})
         self.net.replies[fc.ME_URL] = jr({"daily_limit": 1000})
@@ -213,6 +242,8 @@ class GateTests(Base):
             self.assertEqual(core.free_pick()["state"], "off")
             self.assertEqual(core.banners()["state"], "off")
             self.assertEqual(core.featured()["state"], "off")
+            self.assertEqual(core.featured_free()["state"], "off")
+            self.assertEqual(api.featured_free()["state"], "off")
             self.assertEqual(core.history("free")["state"], "off")
             self.assertEqual(core.history("gated")["state"], "off")
             self.assertEqual(core.reveal(IMG), {"mint": None, "state": "off"})
@@ -256,7 +287,8 @@ class NewPathRulesTests(Base):
         # the real module-level clients: each waits its own random 0..120 s from start
         fresh = _load("t5_core_fresh", PLUGIN / "core.py")
         now = fresh.time.monotonic()
-        waits = [c._next_at - now for c in (fresh._missed, fresh._free_pick, fresh._banners, fresh._free_history)]
+        waits = [c._next_at - now for c in (fresh._missed, fresh._free_pick, fresh._banners, fresh._free_history,
+                                            fresh._featured_free)]
         for w in waits:
             self.assertTrue(-5.0 <= w <= 120.0, waits)
         # a client with rand 0.5 waits 60 s, then the floor applies (the delay is not applied again)
@@ -287,11 +319,14 @@ class NewPathRulesTests(Base):
         self.net.replies[fc.BANNERS_URL] = jr(BANNERS)
         self.net.replies[fc.ME_URL] = jr({"daily_limit": 1000})
         self.net.replies[fc.FEATURED_URL] = jr(FEATURED)
-        core.missed(); core.free_pick(); core.banners()
+        self.net.replies[fc.FREE_FEATURED_URL] = jr(FEATURED)
+        core.FREE_FEATURED_LIVE = True                  # the free board's Featured too: under /api/free-board/ = keyless
+        core.missed(); core.free_pick(); core.banners(); core.featured_free()
         core.featured()
         self.member_entry()
         self.clock.t += 1
         core.featured()
+        self.assertIn(fc.FREE_FEATURED_URL, [c[0] for c in self.net.calls])
         for url, headers, _cap in self.net.calls:
             self.assertEqual(headers["User-Agent"], fc.USER_AGENT)
             self.assertNotIn("?", url)
@@ -422,13 +457,134 @@ class PacingLiveTests(Base):
         self.assertGreaterEqual(entry["featured"].next_at() - self.clock.t, 900)   # featured alone waits 15 min
 
 
+# ----------------------------------------------------------------------------------------------- free Featured Callers
+class FreeFeaturedTests(Base):
+    """Featured Callers on the free board: its own keyless client (never the key, never the member list), off unless
+    BOTH switches are on, the free-feed's own cleaner (freepickclean.clean_featured = the server's) and then the member
+    contract's (parse_featured) as the second check (parse_free_featured)."""
+
+    def test_switch_off_asks_nothing(self):
+        self.live()                                   # HERMES_LIVE on, FREE_FEATURED_LIVE off (its own kill switch)
+        core.FREE_FEATURED_LIVE = False
+        _secret["value"] = KEY
+        self.net.replies[fc.FREE_FEATURED_URL] = jr(FEATURED)
+        for _ in range(3):
+            self.clock.t += 5000
+            self.assertEqual(core.featured_free(), core._off())
+            self.assertEqual(api.featured_free(), core._off())
+        self.assertEqual(self.net.calls, [])
+        self.assertEqual(len(core._members), 0)       # no member client made, no /me asked
+
+    def test_keyless_same_cleaned_output_as_member(self):
+        """The hostile FEATURED fixture through the free client = the member client's cleaned output; no key in any
+        header, no member client touched."""
+        self.live()
+        core.FREE_FEATURED_LIVE = True
+        _secret["value"] = KEY
+        self.net.replies[fc.FREE_FEATURED_URL] = jr(FEATURED)
+        r = api.featured_free()
+        self.assertEqual(r["state"], "fresh")
+        self.assertEqual([c[0] for c in self.net.calls], [fc.FREE_FEATURED_URL])
+        url, headers, cap = self.net.calls[0]
+        self.assertNotIn("Authorization", headers)
+        self.assertFalse(any(KEY in str(v) for v in headers.values()))
+        self.assertEqual(headers, {"User-Agent": fc.USER_AGENT, "Accept": "application/json"})
+        self.assertEqual(cap, ())
+        self.assertEqual(len(core._members), 0)
+        self.assertEqual(r["board"], fc.parse_featured(json.dumps(FEATURED).encode()))
+        k = r["board"]["callers"][0]["calls"][0]
+        self.assertNotIn("http", k["essence"])
+        self.assertEqual(k["body"], "line1\nline2b")
+        self.assertNotIn("channel", k)
+        self.assertNotIn("recaps", r["board"]["callers"][0])
+        self.net.replies[fc.ME_URL] = jr({"daily_limit": 1000})
+        self.net.replies[fc.FEATURED_URL] = jr(FEATURED)
+        core.featured()
+        self.member_entry()
+        self.clock.t += 1
+        self.assertEqual(core.featured()["board"], r["board"])           # same output for this fixture (the free path adds the server cleaner first)
+
+    def test_server_cleaner_then_member_cleaner(self):
+        """The shipped free client parses with parse_free_featured: the server's exact cleaner first (a URL in a label,
+        scheme-less / script links in the text, source phrases, a URL in a symbol: gone), then the member contract's
+        shape. The server's own /featured body reads the same through both parsers (cleaning twice = no change)."""
+        self.assertIs(_SHIPPED_STATE["_featured_free"]._parse, fc.parse_free_featured)
+        fe = {"as_of": "t", "callers": [
+            {"key": "k1", "name": "Caller", "handle": "@c", "tagline": "see https://evil.x", "calls": [
+                {"symbol": "POP", "mint": MINT, "date": "Nov 5", "essence": "go t.me/joinx now WWW.Evil.x",
+                 "body": "javascript:alert(1) hi\nHTTPS://EVIL.X x", "mult": "3x", "channel": "secret"},
+                {"symbol": "POP https://x.y", "mint": MINT}, {"symbol": "3 sources on it", "mint": MINT},
+                {"symbol": "OK", "mint": MINT2, "essence": "two  sources  on it"}]},
+            {"key": "k2", "name": "N 1 Source On It", "calls": []},
+            {"key": "k3", "name": "https://x.y", "calls": []}]}
+        r = fc.parse_free_featured(json.dumps(fe).encode())
+        self.assertEqual((r["count"], r["as_of"]), (1, "t"))
+        c = r["callers"][0]
+        self.assertEqual((c["key"], c["name"], c["handle"], c["tagline"], c["count"]), ("k1", "Caller", "@c", "", 2))
+        self.assertEqual([k["symbol"] for k in c["calls"]], ["POP", "OK"])
+        k = c["calls"][0]
+        self.assertEqual(sorted(k), ["body", "date", "essence", "mint", "mult", "symbol", "ts"])
+        self.assertEqual((k["essence"], k["body"], k["date"], k["ts"], k["mult"]), ("go  now", "hi\n x", "Nov 5", None, "3x"))
+        self.assertEqual(c["calls"][1]["essence"], "")
+        server = freefeed._featured_body(fe, "t")
+        self.assertEqual(fc.parse_free_featured(server), r)
+        self.assertEqual(fc.parse_featured(server), r)       # = the member cleaner over the server's own body
+        member = fc.parse_featured(json.dumps(fe).encode())  # the member cleaner alone keeps more (why both run)
+        self.assertIn("https://evil.x", member["callers"][0]["tagline"])
+        self.assertIn("t.me/joinx", member["callers"][0]["calls"][0]["essence"])
+        self.assertEqual(member["count"], 3)
+        for bad in (b"{}", b'{"callers": {}}', b"[]"):
+            with self.assertRaises(ValueError):
+                fc.parse_free_featured(bad)
+        self.assertEqual(fc.parse_free_featured(b'{"callers": []}'), {"count": 0, "as_of": None, "callers": []})
+
+    def test_not_a_key_client_not_paced(self):
+        self.assertNotIn("featured_free", core._KEY_CLIENTS)
+        self.assertIsNone(_SHIPPED_STATE["_featured_free"]._auth)
+        self.assertEqual(_SHIPPED_STATE["_featured_free"]._url, fc.BASE + "/api/free-board/featured")
+        self.assertTrue(fc.FREE_FEATURED_URL.startswith(fc.BASE + "/api/free-board/"))
+        self.live()
+        core.FREE_FEATURED_LIVE = True
+        _secret["value"] = KEY
+        self.net.replies[fc.ME_URL] = jr({"daily_limit": 1000})
+        self.net.replies[fc.FEATURED_URL] = jr(FEATURED)
+        core.featured()                               # makes the member entry and paces it
+        entry = next(iter(core._members.values()))
+        self.assertFalse(any(c is core._featured_free or c._url == fc.FREE_FEATURED_URL for c in entry.values()
+                             if isinstance(c, fc.FeedClient)))
+        self.assertEqual(core._featured_free._min, 60.0)                  # its own floor, never the member pacing
+
+    def test_4xx_stops_15_min_and_hides_429_keeps(self):
+        self.live()
+        core.FREE_FEATURED_LIVE = True
+        self.net.replies[fc.FREE_FEATURED_URL] = [jr(FEATURED), jr({}, 429, {"retry-after": "120"}), jr({}, 404)]
+        self.assertEqual(core.featured_free()["board"]["count"], 1)
+        self.clock.t += 60
+        r = core.featured_free()
+        self.assertEqual((r["state"], r["board"]["count"]), ("waiting", 1))   # 429: the last good list stays
+        self.assertGreaterEqual(r["retry_in_s"], 120)
+        self.clock.t += 120
+        r = core.featured_free()
+        self.assertEqual(r["error"], "http_404")
+        self.assertIsNone(r["board"])                                      # any other 4xx: hidden, 15 min
+        self.assertGreaterEqual(r["retry_in_s"], fc.MAX_BACKOFF_S)
+
+    def test_route_is_get_only(self):
+        got = {(x.path, tuple(sorted(x.methods))) for x in api.router.routes if x.path in ("/featured", "/featured-free")}
+        self.assertEqual(got, {("/featured", ("GET",)), ("/featured-free", ("GET",))})
+
+
 # ----------------------------------------------------------------------------------------------- cleaners (5.2)
 class CleanerTests(unittest.TestCase):
-    FUNCS = ("_int_only", "_https", "clean_missed_item", "clean_missed", "_ce_line", "clean_pick_card", "clean_banner",
-             "clean_banners", "img_ok")
+    FUNCS = ("_int_only", "_https", "clean_missed_item", "clean_missed", "_no_src", "_ce_line", "_pick_crowd",
+             "clean_pick_card", "clean_banner", "clean_banners", "_feat_label", "_feat_long_text", "clean_featured",
+             "img_ok")
     CONSTS = ("CT_MAGIC", "LOGO_MAX", "BANNER_MAX", "MISSED_MAX", "BANNERS_MAX", "MISSED_TIERS", "CE_STEPS",
-              "PICK_STR_FIELDS", "SOCIAL_KEYS", "IMG_PREFIX")
-    RES = ("_LOGO_KEY_RE", "_CE_SOURCE_SUFFIX_RE", "_BANNER_IMG_RE", "_BANNER_LINK_RE", "_SHA12_RE", "_MINT_RE", "_URL_RE")
+              "PICK_STR_FIELDS", "SOCIAL_KEYS", "IMG_PREFIX", "CE_INDEX_MAX", "CROWD_TIERS", "CROWD_KEYS",
+              "CROWD_SHOWN_MAX", "FEATURED_CALLERS_MAX", "FEATURED_CALLS_MAX", "FEATURED_LABEL_MAX",
+              "FEATURED_SYMBOL_MAX", "FEATURED_ESSENCE_MAX", "FEATURED_BODY_MAX", "_BAD_CHARS", "_BAD_CATEGORIES")
+    RES = ("_LOGO_KEY_RE", "_CE_SOURCE_SUFFIX_RE", "_BANNER_IMG_RE", "_BANNER_LINK_RE", "_SHA12_RE", "_MINT_RE", "_URL_RE",
+           "_FEAT_URL_RE", "_FEAT_LINK_RE", "_WS_RE", "_FEAT_DATE_RE", "_FEAT_TS_RE", "_FEAT_MULT_RE")
 
     @staticmethod
     def _code(fn):
@@ -446,10 +602,45 @@ class CleanerTests(unittest.TestCase):
             self.assertEqual(getattr(hc, name), getattr(freefeed, name), name)
         for name in self.RES:
             self.assertEqual(getattr(hc, name).pattern, getattr(freefeed, name).pattern, name)
+            self.assertEqual(getattr(hc, name).flags, getattr(freefeed, name).flags, name)
         for name in ("_num", "_text"):
             self.assertEqual(inspect.getsource(getattr(hc, name)), inspect.getsource(getattr(freefeed, name)), name)
         self.assertEqual(fc.PLACEHOLDER_PNG, freefeed.PLACEHOLDER_PNG)
         self.assertEqual(fc.IMG_KEY_RE.pattern, freefeed._IMG_PATH_RE.pattern.replace("/api/free-board/img/", ""))
+
+    def test_every_name_the_copies_use_resolves_the_same(self):
+        """Every global name a copied function reads (also inside its generator expressions) is, in freepickclean.py,
+        the same thing as in the server: a copied function (code checked above), _num / _text (source equal), a regex
+        (pattern + flags), the unicodedata module, or an equal value; default arguments equal too. A name missing in the
+        copy would be a NameError at run time: caught here, before any input reaches it."""
+        def names(code):
+            out = set(code.co_names)
+            for k in code.co_consts:
+                if isinstance(k, types.CodeType):
+                    out |= names(k)
+            return out
+        seen = set()
+        for fname in self.FUNCS:
+            self.assertEqual(getattr(hc, fname).__defaults__, getattr(freefeed, fname).__defaults__, fname)
+            for n in names(getattr(freefeed, fname).__code__):
+                if n not in vars(freefeed):                    # a builtin or an attribute name (.get, .fullmatch ...)
+                    continue
+                seen.add(n)
+                self.assertIn(n, vars(hc), (fname, n))
+                a, b = getattr(hc, n), getattr(freefeed, n)
+                if n in self.FUNCS:
+                    continue
+                if n in ("_num", "_text"):
+                    self.assertEqual(inspect.getsource(a), inspect.getsource(b), n)
+                elif isinstance(b, re.Pattern):
+                    self.assertEqual((a.pattern, a.flags), (b.pattern, b.flags), n)
+                elif isinstance(b, types.ModuleType):
+                    self.assertIs(a, b, n)
+                else:
+                    self.assertEqual(a, b, n)
+        for n in ("_no_src", "_pick_crowd", "_feat_label", "_feat_long_text", "_WS_RE", "_FEAT_LINK_RE", "_BAD_CHARS",
+                  "_BAD_CATEGORIES", "unicodedata", "CE_INDEX_MAX", "CROWD_KEYS", "FEATURED_CALLERS_MAX"):
+            self.assertIn(n, seen, n)
 
     HOSTILE = [None, 1, "x", [], {"gain": True, "ageMins": 1, "tier": "strong"}, {"gain": float("nan"), "ageMins": 1, "tier": "strong"},
                {"gain": 2, "ageMins": True, "tier": "strong"}, {"gain": 2, "ageMins": 1.0, "tier": "strong"},
@@ -465,18 +656,107 @@ class CleanerTests(unittest.TestCase):
         self.assertEqual(sorted(out[0]), ["ageMins", "gain", "img", "rising", "tier"])
         self.assertEqual(hc.clean_missed(self.HOSTILE), freefeed.clean_missed(self.HOSTILE))
 
+    CROWD = {"real": 120, "shown": 400, "pct": 30, "tier": "padded", "padded": True, "line": "120 of 400 holders are real."}
+
     def test_pick_hostile_same_as_server(self):
         cards = [CARD, dict(CARD, chain="ETH"), dict(CARD, mint="bad"), dict(CARD, sym="‮$X"), dict(CARD, pct=True),
                  dict(CARD, pct=1.5), dict(CARD, ceLine="ok. 1 source on it."), dict(CARD, ceLine="ok. 12 sources on it."),
                  dict(CARD, ceLine="2 sources on it. more"), dict(CARD, ceStepIndex=11), dict(CARD, socials={"web": "javascript:x"}),
                  dict(CARD, mcap="<b>"), dict(CARD, name="")]
+        cr = self.CROWD
+        cards += [   # ROUND 2: ceStepIndex 0..3, the whole ceLine (ONE tail at most), dexPaid, feeRug / feeRugFlicker, realCrowd
+            dict(CARD, ceStepIndex=0), dict(CARD, ceStepIndex=3), dict(CARD, ceStepIndex=4), dict(CARD, ceStepIndex=-1),
+            dict(CARD, ceStepIndex=True), dict(CARD, ceStepIndex=2.0),
+            dict(CARD, ceLine="ok. 1 source on it. 2 sources on it."), dict(CARD, ceLine=" 3 sources on it."),
+            dict(CARD, ceLine="ok. 3 Sources On It."), dict(CARD, ceLine="ok, two  sources  on it, 3 sources on it."),
+            dict(CARD, ceLine="ok \uff53ources on it. 3 sources on it."), dict(CARD, ceLine="ok. 3 sources on it. "),
+            dict(CARD, ceLine="ok\u200b. 3 sources on it."), dict(CARD, ceLine="x" * 301), dict(CARD, ceLine="ok."),
+            dict(CARD, dexPaid=False), dict(CARD, dexPaid=1), dict(CARD, dexPaid="true"), dict(CARD, dexPaid=None),
+            dict(CARD, feeRug=True), dict(CARD, feeRug=False), dict(CARD, feeRug=1), dict(CARD, feeRug="true"),
+            dict(CARD, feeRug=True, feeRugFlicker=True), dict(CARD, feeRugFlicker=True), dict(CARD, feeRugFlicker=1),
+            dict(CARD, realCrowd=cr), dict(CARD, realCrowd=dict(cr, line="3 sources on it.")),
+            dict(CARD, realCrowd=dict(cr, line=None)), dict(CARD, realCrowd={k: v for k, v in cr.items() if k != "line"}),
+            dict(CARD, realCrowd=dict(cr, extra=1)), dict(CARD, realCrowd=dict(cr, real=401)),
+            dict(CARD, realCrowd=dict(cr, shown=0, real=0)), dict(CARD, realCrowd=dict(cr, shown=10 ** 12 + 1)),
+            dict(CARD, realCrowd=dict(cr, pct=101)), dict(CARD, realCrowd=dict(cr, pct=True)),
+            dict(CARD, realCrowd=dict(cr, real=120.0)), dict(CARD, realCrowd=dict(cr, tier="PADDED")),
+            dict(CARD, realCrowd=dict(cr, padded=1)), dict(CARD, realCrowd=dict(cr, line="<b>")),
+            dict(CARD, realCrowd=[cr]), dict(CARD, realCrowd={k: v for k, v in cr.items() if k != "tier"})]
         for c in cards:
             self.assertEqual(hc.clean_pick_card(c), freefeed.clean_pick_card(c))
         out = hc.clean_pick_card(CARD)
         self.assertEqual(out["socials"], {"x": "https://x.com/p"})
-        self.assertEqual(out["ceLine"], "Buyers keep coming.")
-        for k in ("dexPaid", "realCrowd", "score"):
+        self.assertEqual(out["ceLine"], "Buyers keep coming. 3 sources on it.")   # ROUND 2: the whole line, its tail kept
+        self.assertIs(out["dexPaid"], True)                                        # ROUND 2: dexPaid kept
+        self.assertEqual(out["ceStepIndex"], 2)
+        for k in ("realCrowd", "score", "feeRug", "feeRugFlicker"):                # CARD's realCrowd is not whole
             self.assertNotIn(k, out)
+
+        def pick(**kw):
+            return hc.clean_pick_card(dict(CARD, **kw))
+        self.assertEqual([pick(ceStepIndex=i).get("ceStepIndex") for i in (0, 1, 2, 3, 4, 10, -1, True, 2.0)],
+                         [0, 1, 2, 3, None, None, None, None, None])
+        for line in ("ok. 1 source on it. 2 sources on it.", " 3 sources on it.", "ok. 3 Sources On It.",
+                     "ok \uff53ources on it. 3 sources on it.", "ok, two  sources  on it.", "ok. 3 sources on it. ",
+                     "ok\u200b.", "x" * 301, "<b>ok</b>", "", "   "):
+            self.assertNotIn("ceLine", pick(ceLine=line), line)
+        self.assertEqual(pick(ceLine="ok. 1 source on it.")["ceLine"], "ok. 1 source on it.")
+        self.assertEqual(pick(ceLine="Buyers keep coming.")["ceLine"], "Buyers keep coming.")
+        self.assertIs(pick(dexPaid=False)["dexPaid"], False)
+        for v in (1, "true", None):
+            self.assertNotIn("dexPaid", pick(dexPaid=v))
+        self.assertIs(pick(feeRug=True)["feeRug"], True)                           # feeRug: only true
+        for v in (False, 1, "true", None):
+            self.assertNotIn("feeRug", pick(feeRug=v))
+        both = pick(feeRug=True, feeRugFlicker=True)                               # red wins: feeRug alone
+        self.assertEqual((both.get("feeRug"), "feeRugFlicker" in both), (True, False))
+        self.assertIs(pick(feeRugFlicker=True)["feeRugFlicker"], True)             # the server rule (sent later)
+        self.assertEqual(pick(realCrowd=cr)["realCrowd"], cr)                      # realCrowd: all or nothing
+        no_line = {k: v for k, v in cr.items() if k != "line"}
+        self.assertEqual(pick(realCrowd=dict(cr, line="2 sources on it."))["realCrowd"], no_line)
+        self.assertEqual(pick(realCrowd=no_line)["realCrowd"], no_line)
+        for bad in (dict(cr, extra=1), dict(cr, real=401), dict(cr, pct=True), dict(cr, real=120.0),
+                    dict(cr, tier="PADDED"), dict(cr, padded=1), dict(cr, shown=0, real=0), {"real": 1}, [cr]):
+            self.assertNotIn("realCrowd", pick(realCrowd=bad), bad)
+        self.assertEqual(set(pick(realCrowd=cr, feeRug=True)) - set(freefeed.PICK_STR_FIELDS),
+                         {"mint", "sym", "name", "chain", "fresh", "pct", "spark", "socials", "ceStep", "ceStepIndex",
+                          "ceLine", "dexPaid", "feeRug", "realCrowd"})
+
+    def test_featured_hostile_same_as_server(self):
+        call = {"symbol": "POP", "mint": MINT, "date": "Nov 5", "ts": "2026-11-05T10:00:00Z", "essence": "e", "body": "b",
+                "mult": "2x", "channel": "c"}
+        callers = [{"key": "k", "name": "n", "handle": "h", "tagline": "t", "recaps": [1], "calls": [call]},
+                   {"key": "www.x.y", "name": "n", "calls": []}, {"key": "k", "name": "HTTP://X.Y", "calls": []},
+                   {"key": "k", "name": "1 source on it", "calls": []}, {"key": "k", "name": "\u200b", "calls": []},
+                   {"key": "k", "name": "n", "calls": {}}, {"key": "k", "name": "n"}, "x", None,
+                   {"key": "k", "name": "n", "tagline": "https://t.me/x", "handle": "<@h>", "calls": [
+                       dict(call, symbol="P https://a.b"), dict(call, symbol="2 sources on it"), dict(call, mint="bad"),
+                       dict(call, symbol="\u202ePOP"), dict(call, essence="hi www.a.b tg:x data:y VBScript:z"),
+                       dict(call, body="l1\r\nl2 javascript:x https://a.b telegram.dog/x"),
+                       dict(call, essence="x \uff53ources on it"), dict(call, date="nov 5", ts="now", mult="2x!"),
+                       dict(call, essence="e" * 700, body="b" * 3000), "call"]}]
+        docs = [None, [], {}, {"callers": {}}, {"callers": callers}, {"callers": callers * 3},
+                {"callers": [dict(callers[0], calls=[call] * 30)]}]
+        for d in docs:
+            self.assertEqual(hc.clean_featured(d), freefeed.clean_featured(d))
+        out = hc.clean_featured({"callers": callers})
+        self.assertEqual(out["count"], 3)
+        a, w, b = out["callers"]
+        self.assertEqual(a, {"key": "k", "name": "n", "handle": "h", "tagline": "t", "count": 1,
+                             "calls": [{"symbol": "POP", "mint": MINT, "date": "Nov 5", "ts": "2026-11-05T10:00:00Z",
+                                        "essence": "e", "body": "b", "mult": "2x"}]})
+        self.assertEqual(w["key"], "www.x.y")          # a label drops only a URL with a scheme (the server rule)
+        self.assertEqual((b["tagline"], b["handle"]), ("", "@h"))
+        self.assertEqual([c["symbol"] for c in b["calls"]], ["POP"] * 5)
+        self.assertEqual(b["calls"][0]["essence"], "hi")
+        self.assertEqual(b["calls"][1]["body"], "l1\nl2")
+        self.assertEqual(b["calls"][2]["essence"], "")
+        self.assertEqual(sorted(b["calls"][3]), ["body", "essence", "mint", "symbol"])
+        self.assertEqual((len(b["calls"][4]["essence"]), len(b["calls"][4]["body"])), (150, 600))
+        self.assertEqual(len(hc.clean_featured({"callers": callers * 3})["callers"]), 3)   # only the first 10 looked at
+        self.assertEqual(hc.clean_featured({"callers": [dict(callers[0], calls=[call] * 30)]})["callers"][0]["count"], 20)
+        for d in (None, [], {}, {"callers": {}}):
+            self.assertIsNone(hc.clean_featured(d))
 
     def test_banners_hostile_same_as_server(self):
         bs = [BANNERS["banners"][0], dict(BANNERS["banners"][0], id=8), dict(BANNERS["banners"][0], link="http://x.com"),

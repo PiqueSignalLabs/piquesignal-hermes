@@ -4222,7 +4222,7 @@ class Audit2ManifestVersionTest(unittest.TestCase):
         self.assertEqual(man["version"], core.VERSION)
         m = re.search(r"(?m)^version:\s*(\S+)\s*$", (PLUGIN / "plugin.yaml").read_text(encoding="utf-8"))
         self.assertEqual(m.group(1), core.VERSION)
-        self.assertEqual(core.VERSION, "1.5.0")               # 1.5.0: the catalog review fix release (1.4.0 = the hackathon release)
+        self.assertEqual(core.VERSION, "1.5.1")               # 1.5.1: round 2 (gold free pick, free Featured Callers); 1.5.0 = the catalog review fix release
 
 
 class Audit2LiveSlotTests(unittest.TestCase):

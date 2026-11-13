@@ -3,8 +3,10 @@ address the code calls (taken from feed_client.py, and checked against what core
 route, and README.md, plugin.yaml, guide.md (section 9) and the core.py / feed_client.py headers carry the live
 disclosure words (specific marks, never a bare word like "banners"), with no "switched off" wording left anywhere.
 While it is off (the kill switch), README.md, plugin.yaml and guide.md must not name the new addresses (they must not
-read as live). The ready words are in hermes_live_docs.md, next to this file. Reads the source text only: no import of
-the plugin, no network."""
+read as live). Featured Callers on the free board follows its OWN switch (core.FREE_FEATURED_LIVE, on in this release:
+the server route is installed): while that is off, no doc names its address, its route or "Featured Callers on the free board", and
+they are not required; once it is on they are required like every other address. The ready words are in
+hermes_live_docs.md, next to this file. Reads the source text only: no import of the plugin, no network."""
 import ast
 import json
 import re
@@ -32,6 +34,11 @@ CORE_WORDS = ("HERMES_LIVE = True", "/api/free-board/missed", "/api/pull/feature
               "/api/pull/history", "3.2 MB", "not reveal / images", "a history 404 = gone until the next start")
 FEED_WORDS = ("HERMES_LIVE = True", "/api/free-board/missed", "/api/pull/featured-callers", "3.2 MB",
               "a history 404 = never again until the next start")
+# Featured Callers on the FREE board (keyless): named in the docs only once core.FREE_FEATURED_LIVE is on (the flip adds
+# them to README.md, plugin.yaml and guide.md in the same change); never while it is off
+FREE_FEATURED_PATH = "/api/free-board/featured"
+FREE_FEATURED_ROUTE = "/featured-free"
+FREE_FEATURED_MARKS = (FREE_FEATURED_PATH, "`" + FREE_FEATURED_ROUTE, "Featured Callers on the free board")
 # wording of the switched-off release: never left in any doc while the switch is on
 OFF_WORDS = ("switched off in this release", "SWITCHED OFF", "never calls them", "NOT LIVE in this release",
              "HERMES_LIVE = False:", "the addresses switched off")
@@ -75,12 +82,20 @@ def section9(guide):
     return guide[guide.index("## 9. The Hermes plugin"):guide.index("## 10. The boards")]
 
 
-def live_doc_gaps(live, readme, yaml, guide9):
-    """What is wrong with the docs for this switch position: missing marks when live, live marks present when off."""
+def live_doc_gaps(live, readme, yaml, guide9, free_featured=False):
+    """What is wrong with the docs for this switch position: missing marks when live, live marks present when off.
+    free_featured = core.FREE_FEATURED_LIVE: off = the free board's Featured address / route / words are never named
+    (and not required); on = required like the rest."""
     every, new = addresses()
+    rts = routes()
+    gaps = []
+    if not free_featured:
+        every, new, rts = every - {FREE_FEATURED_PATH}, new - {FREE_FEATURED_PATH}, rts - {FREE_FEATURED_ROUTE}
+        gaps += [(f, w) for f, t in (("README.md", readme), ("plugin.yaml", yaml), ("guide.md", guide9))
+                 for w in FREE_FEATURED_MARKS if w in t]
     if live:
-        gaps = [("README.md", w) for w in sorted(every) + list(README_WORDS) if w not in readme]
-        gaps += [("README.md", "`" + r) for r in sorted(routes()) if "`" + r not in readme]
+        gaps += [("README.md", w) for w in sorted(every) + list(README_WORDS) if w not in readme]
+        gaps += [("README.md", "`" + r) for r in sorted(rts) if "`" + r not in readme]
         if "cdn.dexscreener.com" not in readme:
             gaps.append(("README.md", "cdn.dexscreener.com"))
         gaps += [("plugin.yaml", w) for w in YAML_WORDS if w not in yaml]
@@ -88,7 +103,7 @@ def live_doc_gaps(live, readme, yaml, guide9):
         gaps += [(f, w) for f, t in (("README.md", readme), ("plugin.yaml", yaml), ("guide.md", guide9))
                  for w in OFF_WORDS if w in t]
         return gaps
-    return ([("README.md", w) for w in sorted(new) if w in readme]
+    return (gaps + [("README.md", w) for w in sorted(new) if w in readme]
             + [("plugin.yaml", w) for w in YAML_WORDS if w in yaml]
             + [("guide.md", w) for w in GUIDE_WORDS if w in guide9])
 
@@ -96,16 +111,21 @@ def live_doc_gaps(live, readme, yaml, guide9):
 class DocsFollowTheSwitch(unittest.TestCase):
     def setUp(self):
         self.live = _flag(PLUGIN / "core.py", r"^HERMES_LIVE = (True|False)\s*$")
+        self.ff = _flag(PLUGIN / "core.py", r"^FREE_FEATURED_LIVE = (True|False)\s*$")
 
     def test_docs_match_hermes_live(self):
         readme, yaml = _read(PLUGIN / "README.md"), _read(PLUGIN / "plugin.yaml")
         guide9 = section9(_read(PLUGIN / "guide.md"))
-        self.assertEqual(live_doc_gaps(self.live, readme, yaml, guide9), [],
+        self.assertEqual(live_doc_gaps(self.live, readme, yaml, guide9, self.ff), [],
                          "HERMES_LIVE is %s: update README.md / plugin.yaml / guide.md (ready words: tests/hermes_live_docs.md)"
                          % self.live)
 
     def test_this_release_is_live(self):
         self.assertIs(self.live, True)
+
+    def test_this_release_has_free_featured_live(self):
+        """Featured Callers on the free board is on in this release (the server route is installed and public)."""
+        self.assertIs(self.ff, True)
 
     def test_headers_carry_the_live_text(self):
         """core.py, feed_client.py and plugin_api.py describe the switch as it is: live words in, off words out."""
@@ -116,6 +136,11 @@ class DocsFollowTheSwitch(unittest.TestCase):
             self.assertIn(w, core, w)
         for w in FEED_WORDS:
             self.assertIn(w, feed, w)
+        if self.ff:                         # the free board's Featured address is named in both headers once it is on
+            for name, text in (("core.py", core), ("feed_client.py", feed)):
+                self.assertIn(FREE_FEATURED_PATH, text, name)
+                self.assertNotIn("proposed", text, name)
+                self.assertNotIn("until the server route is installed", text, name)
         for name, text in (("core.py", core), ("feed_client.py", feed), ("plugin_api.py", api)):
             for w in OFF_WORDS:
                 self.assertNotIn(w, text, (name, w))
@@ -141,6 +166,8 @@ class DocsFollowTheSwitch(unittest.TestCase):
     def test_ready_words_cover_every_mark(self):
         ready = _read(READY)
         _every, new = addresses()
+        if not self.ff:                     # its ready words come with the FREE_FEATURED_LIVE flip
+            new = new - {FREE_FEATURED_PATH}
         for w in sorted(new) + list(YAML_WORDS):
             self.assertIn(w, ready, w)
         self.assertIn("LIVE in this release", ready)
@@ -161,20 +188,31 @@ class DocsFollowTheSwitch(unittest.TestCase):
         self.assertTrue(live_doc_gaps(False, "", "Featured Callers", ""))
         self.assertTrue(live_doc_gaps(False, "", "", GUIDE_WORDS[0]))
         full = " ".join(sorted(every) + list(README_WORDS) + ["`" + r for r in sorted(routes())] + ["cdn.dexscreener.com"])
-        self.assertEqual(live_doc_gaps(True, full, " ".join(YAML_WORDS), " ".join(GUIDE_WORDS)), [])
-        self.assertTrue(live_doc_gaps(True, full + " the routes switched off in this release", " ".join(YAML_WORDS),
-                                      " ".join(GUIDE_WORDS)))
-        self.assertTrue(live_doc_gaps(True, full.replace("/api/pull/featured-callers", ""), " ".join(YAML_WORDS),
-                                      " ".join(GUIDE_WORDS)))
+        yw, gw = " ".join(YAML_WORDS), " ".join(GUIDE_WORDS)
+        self.assertEqual(live_doc_gaps(True, full, yw, gw, True), [])
+        self.assertTrue(live_doc_gaps(True, full + " the routes switched off in this release", yw, gw, True))
+        self.assertTrue(live_doc_gaps(True, full.replace("/api/pull/featured-callers", ""), yw, gw, True))
+        # the free board's Featured: named while its switch is off = reported; left out = fine; left out once on = reported
+        full_off = " ".join(sorted(every - {FREE_FEATURED_PATH}) + list(README_WORDS)
+                            + ["`" + r for r in sorted(routes() - {FREE_FEATURED_ROUTE})] + ["cdn.dexscreener.com"])
+        self.assertEqual(live_doc_gaps(True, full_off, yw, gw, False), [])
+        self.assertEqual(live_doc_gaps(True, full, yw, gw, False),
+                         [("README.md", FREE_FEATURED_PATH), ("README.md", "`" + FREE_FEATURED_ROUTE)])
+        self.assertTrue(live_doc_gaps(True, full_off, yw + " Featured Callers on the free board", gw, False))
+        self.assertTrue(live_doc_gaps(False, "", "", "Featured Callers on the free board", False))
+        self.assertEqual(sorted(live_doc_gaps(True, full_off, yw, gw, True)),
+                         [("README.md", FREE_FEATURED_PATH), ("README.md", "`" + FREE_FEATURED_ROUTE)])
 
     def test_marks_are_the_real_addresses(self):
-        """feed_client.py defines exactly the 4 old + 8 new addresses, and core.py calls only addresses feed_client.py
-        defines (so 'README names every address' means every address the live code calls)."""
+        """feed_client.py defines exactly the 4 old + 9 new addresses, and core.py calls only addresses feed_client.py
+        defines (so 'README names every address' means every address the live code calls; the free board's Featured
+        address once its own switch is on)."""
         every, new = addresses()
-        self.assertEqual(len(new), 8)
+        self.assertEqual(len(new), 9)
         self.assertEqual(new, {"/api/free-board/missed", "/api/free-board/free-pick", "/api/free-board/banners",
                                "/api/free-board/img/", "/api/free-board/history", "/api/pull/featured-callers",
-                               "/api/pull/missed-reveal/", "/api/pull/history"})
+                               "/api/pull/missed-reveal/", "/api/pull/history", FREE_FEATURED_PATH})
+        self.assertIn(FREE_FEATURED_ROUTE, routes())
         self.assertEqual(every - new, {"/api/free-board", "/api/pull/feed", "/api/pull/early-edge", "/api/pull/me"})
         fsrc = (PLUGIN / "feed_client.py").read_text(encoding="utf-8")
         defined = set(re.findall(r'^([A-Z][A-Z_]*) = BASE \+ "', fsrc, re.M))

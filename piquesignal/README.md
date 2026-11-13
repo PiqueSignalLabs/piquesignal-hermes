@@ -10,7 +10,8 @@ loud. Deep Check and Board talk numbers come from the board or live data, never 
 Grok cites.
 
 **Free or member:** the free board works with no key and no account; a Pique Signal member key adds the live member
-board (no delay) with Clear Eyes, Real Crowd, Early Edge and Featured Callers.
+board (no delay) with Clear Eyes, Real Crowd, Early Edge and Featured Callers (Featured Callers also shows on the free
+board, with no key).
 
 **What you need:** Hermes Desktop 0.23.0 or later with an AI model set up. The board is free. Deep Check and Board
 talk run on your own AI model, so they use your own AI credits. The member plan is $49 Gated or $99 Builder at
@@ -37,7 +38,7 @@ Everything on the board comes from systems we built and run ourselves:
 - **Clear Eyes** *(member)* gives every called coin a plain strength read: Flagged, Early, Building, Peak, or Faded if
   it dies.
 - **Early Edge** *(member)*: our list of coins picked up early.
-- **Featured Callers** *(member)*: callers we back, with their newest calls.
+- **Featured Callers** *(free and member boards)*: callers we back, with their newest calls.
 - **A public track record** at piquesignal.xyz/track-record, so you can see how past calls did.
 
 No check catches every rug, and nothing here is financial advice. It is research; you decide.
@@ -142,7 +143,7 @@ The two views are the same as on the website:
 
 | View | Needs | What you see |
 |---|---|---|
-| **Free** | nothing | The free board, the same as piquesignal.xyz/free: at least 10 minutes behind live (up to 60 minutes for strong coins), with the Missed strip, the Free Pick and banners. |
+| **Free** | nothing | The free board, the same as piquesignal.xyz/free: at least 10 minutes behind live (up to 60 minutes for strong coins), with the Missed strip, the Free Pick, banners and the Featured Callers link. |
 | **Member (gated)** | your Pique Signal member key | The live member board (no delay) with Clear Eyes, Real Crowd, Early Edge and Featured Callers, plus the member Deep Check lines. |
 
 No key yet? The lock icon at the top of the free board (in the mobile view, **Unlock** in the menu) and the **Unlock
@@ -184,13 +185,16 @@ No telemetry. Every limit is in [What it does on the network](#what-it-does-on-t
 - **Filters:** both boards have the website's filter chips. Three website filters (Caller, Flash point and Signals)
   are left out of Hermes.
 - **Status bar:** a small count of the coins on the board. Click it to open the board.
-- **Missed strip, Free Pick and banners (free board) and Featured Callers (member board):** the same parts as on the
-  website. The Missed strip ("Paid gets it first") shows paid calls that went up, by gain only; with a member key a
+- **Missed strip, Free Pick and banners (free board) and Featured Callers (free and member boards):** the same parts as
+  on the website. The Missed strip ("Paid gets it first") shows paid calls that went up, by gain only; with a member key a
   click on a tile opens that coin on the member board. The Free Pick shows the free board's live pick with its
-  countdown. Banners are marked "Ad". Featured Callers (member key) lists the callers' newest calls; a call opens its
+  countdown, as the member card in gold (its Clear Eyes line, DEX paid, Fake Volume and Real Crowd included). Banners are marked "Ad". Featured Callers (member key) lists the callers' newest calls; a call opens its
   details (Copy, Dexscreener, Solscan, pump.fun and **Open on board**, which opens that coin on the member board), and
-  a caller with a valid Telegram channel name gets a **Telegram** button. Member parts need a valid member key; if a
-  part cannot load, the plugin hides it and the rest of the board works as usual.
+  a caller with a valid Telegram channel name gets a **Telegram** button. Featured Callers on the free board: a
+  **Featured Callers** link under the board's Hermes row (shown only while there are callers) opens the same pop-up from
+  the free board's own no-key list; as on the website, a call's **Open on board** opens that coin on the member board
+  (without a key, the member board stays locked). Member parts need a valid member key; if a part cannot load, the
+  plugin hides it and the rest of the board works as usual.
 - **Early Edge** (member board, on the full page and in the side pane at its normal width): the website's Early
   Edge panel of coins picked up early, with its switch and its "Tune what you see" choices. In the mobile view (the
   side pane dragged narrow), **Early Edge** in the menu opens the website in your browser.
@@ -279,8 +283,10 @@ hold or trade coins shown on the board. Nothing trades or touches a wallet.*
     (the Missed strip: gains only, never a coin name or address) and `GET /api/free-board/free-pick` (the Free Pick),
     each at most once every 30 seconds; `GET /api/free-board/banners` (the banners marked "Ad"), at most once every
     5 minutes; `GET /api/free-board/img/<key>` (only the pictures those Missed and banner answers name, at most 2
-    every 10 seconds; a coin logo is kept 10 minutes, a banner picture 24 hours); and `GET /api/free-board/history`
-    (the free board's last 24 h, for Rewind; see below).
+    every 10 seconds; a coin logo is kept 10 minutes, a banner picture 24 hours); `GET /api/free-board/featured`
+    (Featured Callers on the free board: no key is ever sent, asked only while a free board is open, at most once a
+    minute, never while the member board is open); and `GET /api/free-board/history` (the free board's last 24 h, for
+    Rewind; see below).
   - with a member key: `GET /api/pull/feed` (the member board), `GET /api/pull/me` (your key's daily limit, at
     most hourly), `GET /api/pull/early-edge`, `GET /api/pull/featured-callers` (Featured Callers, while the member
     board is open: at most once every 15 minutes, hourly until your key's daily limit is known), `GET /api/pull/history`
@@ -299,7 +305,7 @@ hold or trade coins shown on the board. Nothing trades or touches a wallet.*
   - Every request has a back-off. It follows `Retry-After` (at most 1 hour), slows down after errors, and stops for 15
     minutes (plus a little random extra) after a rejected key or any other refused request. If only Early Edge or
     Featured Callers is refused for your key, only that part is hidden; it is asked again after that wait.
-  - The Missed strip, Free Pick, banners, Featured Callers and both history addresses wait a random 0 to 120 seconds
+  - The Missed strip, Free Pick, banners, both Featured Callers lists and both history addresses wait a random 0 to 120 seconds
     before their first request after Hermes starts (Missed reveals and pictures have no such wait: they are asked only
     when needed). On these addresses a refused request (any 4xx but 429) stops that part for about 15 minutes (plus a
     little random extra) and hides it; a 404 on a history address stops it until Hermes restarts. A 429 or 503 keeps
@@ -518,8 +524,9 @@ screen. The Hermes buttons on the board (*Ask about*, *How it works*, *Morning b
 - `dashboard/plugin_api.py`: the backend routes (`/status`, `/board?view=free|gated`, `/early-edge`, `/panel`,
   where the board reports its view and your picked coin, `/coin-icon` for a pop-up's coin picture, `/chart` for a
   price chart (on your click only), `/chart/trades` for its live trades (only while it is open and visible), `/missed`,
-  `/free-pick`, `/banners`, `/featured`, `/img`, `/reveal` and `/history` for the Missed strip, Free Pick, banners,
-  Featured Callers, their pictures, Missed reveals and the 24 h history, and the Board talk routes `/live/speak-test`, `/live/caps`,
+  `/free-pick`, `/banners`, `/featured`, `/featured-free`, `/img`, `/reveal` and `/history` for the Missed strip, Free
+  Pick, banners, Featured Callers (member board; free board, no key), their pictures, Missed reveals and the 24 h
+  history, and the Board talk routes `/live/speak-test`, `/live/caps`,
   `/live/episode`, `/live/episode/replay`, `/live/episode/audio` and `/live/episode/stop`).
 - `core.py`: the shared Python part (one copy per Hermes process): the paced feed clients, the picked coin, the
   pop-up coin pictures, the board facts in spoken words, the tag explanations and Deep Check (its fixed lines, the

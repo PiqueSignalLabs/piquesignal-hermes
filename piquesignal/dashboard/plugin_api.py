@@ -31,6 +31,8 @@ Routes:
     GET  /free-pick              the Free Pick {pick, nextInSecs}: /api/free-board/free-pick (keyless)
     GET  /banners                the banners {ok, banners}: /api/free-board/banners (keyless; no view / click counting)
     GET  /featured               Featured Callers: /api/pull/featured-callers (member key)
+    GET  /featured-free          Featured Callers on the free board: /api/free-board/featured (keyless, never the key;
+                                 asked only while core.FREE_FEATURED_LIVE too, else "off" with no network)
     GET  /img/{key}              {"data": <data: URL or null>}: /api/free-board/img/{key} (keyless); key = 16 hex or
                                  b<id>-<12 hex>, checked BEFORE anything, and only a key the current Missed / banners
                                  answers reference is ever requested
@@ -169,6 +171,11 @@ def banners() -> dict:
 @router.get("/featured")
 def featured() -> dict:
     return core.featured()
+
+
+@router.get("/featured-free")
+def featured_free() -> dict:
+    return core.featured_free()
 
 
 @router.get("/img/{key}")

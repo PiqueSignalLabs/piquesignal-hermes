@@ -235,10 +235,129 @@ _NO_DATA_CHIPS = [  # all 4 boards: the More list loses Caller / Flash point / S
      " {id:'signals',label:'Signals',type:'cycle',opts:[['2+',2],['3+',3],['4+',4]],test:function(s,v){return num(s.sigCount)>=v;}}\n];",
      " {id:'realvol',label:'Hide fake vol',type:'toggle',test:function(s){return s.feeRug!==true&&s.feeRugFlicker!==true;}}\n];", 1),
 ]
+# The free live pick (the gold card the free boards draw for s._fp, and its pop-up) gets the gated board's look, computer +
+# phone, free boards only (every other free card and pop-up keeps the free look; the gated boards are not touched):
+# (a) the card chart and (b) the pop-up chart take the gated colour (cyan, DOWN_HEX when the coin is done) only when
+# s._fp===true; (c) the free buildClearEyes (called only for s._fp) becomes the gated one, byte for byte (the gated computer
+# and phone pages carry the same function), so the pick shows the gated Clear Eyes states (Early, Rug risk). These swaps run
+# FIRST in the free boards' list: the website's strength-word swap (_SRV_STRENGTH_SUBS) then changes the help line inside the
+# swapped-in function exactly as it does on the gated boards. Each swap has count 1.
+_FP_CHART = "(s._fp===true?(faded?DOWN_HEX:'#34D3E6'):(up?UP_HEX:DOWN_HEX))"
+_GATED_CE = (
+    "function buildClearEyes(s){\n"
+    "  if(!s||(!s.ceStep&&s.bail!==true))return null;\n"
+    "  var bail=(s.bail===true);\n"
+    "  var dead=(!bail&&s.ceStep===\"fading\"), cool=(!bail&&s.ceStep===\"cooling\"), floored=(!bail&&s.ceStep===\"floor\"), early=(!bail&&s.ceStep===\"early\");\n"
+    "  var box=el(\"div\",\"ce\"+((bail||dead)?\" dead\":cool?\" cooling\":floored?\" floor\":early?\" early\":\"\"));\n"
+    "  var hd=el(\"div\",\"ce-hd\");\n"
+    "  hd.appendChild(el(\"span\",\"ce-name\",\"CLEAR EYES\"));\n"
+    "  hd.appendChild(el(\"span\",\"ce-sub\",\"how strong it's gotten\"));\n"
+    "  var q=el(\"button\",\"ce-q\",\"?\");q.type=\"button\";q.setAttribute(\"aria-label\",\"What is Clear Eyes?\");q.setAttribute(\"aria-expanded\",\"false\");q.setAttribute(\"aria-controls\",\"ce-help\");\n"
+    "  hd.appendChild(q);box.appendChild(hd);\n"
+    "  var lad=el(\"div\",\"ce-lad\");\n"
+    "  if(bail||dead||cool||floored||early){\n"
+    "    lad.setAttribute(\"role\",\"img\");\n"
+    "    if(bail){lad.setAttribute(\"aria-label\",\"Rug risk — bail out\");lad.appendChild(el(\"span\",\"ce-step dead-step\",\"⚠ Rug risk\"));}\n"
+    "    else if(dead){lad.setAttribute(\"aria-label\",\"Faded — this coin is dead\");lad.appendChild(el(\"span\",\"ce-step dead-step\",\"Faded\"));}\n"
+    "    else if(cool){lad.setAttribute(\"aria-label\",\"Pulled back below the flag\");lad.appendChild(el(\"span\",\"ce-step cool-step\",\"Pulled back\"));}\n"
+    "    else if(early){lad.setAttribute(\"aria-label\",\"Early — a fresh call, still holding\");lad.appendChild(el(\"span\",\"ce-step early-step\",\"Early\"));}\n"
+    "    /**/\n"
+    "    else{lad.setAttribute(\"aria-label\",\"Warning — under $15k market cap\");lad.appendChild(el(\"span\",\"ce-step floor-step\",\"⚠ Under $15k\"));}\n"
+    "  }else{\n"
+    "    var idx=(typeof s.ceStepIndex===\"number\")?s.ceStepIndex:0;\n"
+    "    lad.setAttribute(\"role\",\"img\");lad.setAttribute(\"aria-label\",\"Strength: \"+(CE_STEP_LABEL[s.ceStep]||s.ceStep)+\", step \"+(idx+1)+\" of 4\");\n"
+    "    [\"flagged\",\"heating\",\"strong\",\"confirmed\"].forEach(function(k,i){\n"
+    "      if(i>0)lad.appendChild(el(\"span\",\"ce-conn\"+(i<=idx?\" on\":\"\")));\n"
+    "      lad.appendChild(el(\"span\",\"ce-step\"+(i===idx?\" on\":\"\")+(i<idx?\" past\":\"\"),CE_STEP_LABEL[k]));\n"
+    "    });\n"
+    "  }\n"
+    "  box.appendChild(lad);\n"
+    "  if(s.ceLine)box.appendChild(el(\"div\",\"ce-line\",s.ceLine));\n"
+    "  var help=el(\"div\",\"ce-help\");help.hidden=true;help.id=\"ce-help\";help.setAttribute(\"role\",\"region\");help.setAttribute(\"aria-label\",\"How Clear Eyes works\");\n"
+    "  help.textContent=\"We watch every coin after it's flagged. As buyers and price back it, it climbs: Flagged → Heating up → Strong → Confirmed. If it dies, it shows Faded.\";\n"
+    "  box.appendChild(help);\n"
+    "  q.addEventListener(\"click\",function(){var h=help.hidden;help.hidden=!h;q.setAttribute(\"aria-expanded\",h?\"true\":\"false\");});\n"
+    "  return box;\n"
+    "}")
+_FREE_CE_D = (
+    "function buildClearEyes(s){\n"
+    "  if(!s||(!s.ceStep&&s.bail!==true))return null;\n"
+    "  var bail=(s.bail===true);\n"
+    "  var dead=(!bail&&s.ceStep===\"fading\"), cool=(!bail&&s.ceStep===\"cooling\"), floored=(!bail&&s.ceStep===\"floor\");\n"
+    "  var box=el(\"div\",\"ce\"+((bail||dead)?\" dead\":cool?\" cooling\":floored?\" floor\":\"\"));\n"
+    "  var hd=el(\"div\",\"ce-hd\");\n"
+    "  hd.appendChild(el(\"span\",\"ce-name\",\"CLEAR EYES\"));\n"
+    "  hd.appendChild(el(\"span\",\"ce-sub\",\"how strong it's gotten\"));\n"
+    "  var q=el(\"button\",\"ce-q\",\"?\");q.type=\"button\";q.setAttribute(\"aria-label\",\"What is Clear Eyes?\");q.setAttribute(\"aria-expanded\",\"false\");q.setAttribute(\"aria-controls\",\"ce-help\");\n"
+    "  hd.appendChild(q);box.appendChild(hd);\n"
+    "  var lad=el(\"div\",\"ce-lad\");\n"
+    "  if(bail||dead||cool||floored){\n"
+    "    lad.setAttribute(\"role\",\"img\");\n"
+    "    if(bail){lad.setAttribute(\"aria-label\",\"Rug risk — bail out\");lad.appendChild(el(\"span\",\"ce-step dead-step\",\"⚠ Rug risk\"));}\n"
+    "    else if(dead){lad.setAttribute(\"aria-label\",\"Faded — this coin is dead\");lad.appendChild(el(\"span\",\"ce-step dead-step\",\"Faded\"));}\n"
+    "    else if(cool){lad.setAttribute(\"aria-label\",\"Pulled back below the flag\");lad.appendChild(el(\"span\",\"ce-step cool-step\",\"Pulled back\"));}\n"
+    "    else{lad.setAttribute(\"aria-label\",\"Warning — under $15k market cap\");lad.appendChild(el(\"span\",\"ce-step floor-step\",\"⚠ Under $15k\"));}\n"
+    "  }else{\n"
+    "    var idx=(typeof s.ceStepIndex===\"number\")?s.ceStepIndex:0;\n"
+    "    lad.setAttribute(\"role\",\"img\");lad.setAttribute(\"aria-label\",\"Strength: \"+(CE_STEP_LABEL[s.ceStep]||s.ceStep)+\", step \"+(idx+1)+\" of 4\");\n"
+    "    [\"flagged\",\"heating\",\"strong\",\"confirmed\"].forEach(function(k,i){\n"
+    "      if(i>0)lad.appendChild(el(\"span\",\"ce-conn\"+(i<=idx?\" on\":\"\")));\n"
+    "      lad.appendChild(el(\"span\",\"ce-step\"+(i===idx?\" on\":\"\")+(i<idx?\" past\":\"\"),CE_STEP_LABEL[k]));\n"
+    "    });\n"
+    "  }\n"
+    "  box.appendChild(lad);\n"
+    "  if(s.ceLine)box.appendChild(el(\"div\",\"ce-line\",s.ceLine));\n"
+    "  var help=el(\"div\",\"ce-help\");help.hidden=true;help.id=\"ce-help\";help.setAttribute(\"role\",\"region\");help.setAttribute(\"aria-label\",\"How Clear Eyes works\");\n"
+    "  help.textContent=\"We watch every coin after it's flagged. As buyers and price back it, it climbs: Flagged → Heating up → Strong → Confirmed. If it dies, it shows Faded.\";\n"
+    "  box.appendChild(help);\n"
+    "  q.addEventListener(\"click\",function(){var h=help.hidden;help.hidden=!h;q.setAttribute(\"aria-expanded\",h?\"true\":\"false\");});\n"
+    "  return box;\n"
+    "}")
+_FREE_CE_M = (
+    "function buildClearEyes(s){\n"
+    "  if(!s||!s.ceStep)return null;\n"
+    "  var dead=(s.ceStep===\"fading\"), cool=(s.ceStep===\"cooling\"), floored=(s.ceStep===\"floor\");\n"
+    "  var box=el(\"div\",\"ce\"+(dead?\" dead\":cool?\" cooling\":floored?\" floor\":\"\"));\n"
+    "  var hd=el(\"div\",\"ce-hd\");\n"
+    "  hd.appendChild(el(\"span\",\"ce-name\",\"CLEAR EYES\"));\n"
+    "  hd.appendChild(el(\"span\",\"ce-sub\",\"how strong it's gotten\"));\n"
+    "  var q=el(\"button\",\"ce-q\",\"?\");q.type=\"button\";q.setAttribute(\"aria-label\",\"What is Clear Eyes?\");q.setAttribute(\"aria-expanded\",\"false\");q.setAttribute(\"aria-controls\",\"ce-help\");\n"
+    "  hd.appendChild(q);box.appendChild(hd);\n"
+    "  var lad=el(\"div\",\"ce-lad\");\n"
+    "  if(dead||cool||floored){\n"
+    "    lad.setAttribute(\"role\",\"img\");\n"
+    "    if(dead){lad.setAttribute(\"aria-label\",\"Faded — this coin is dead\");lad.appendChild(el(\"span\",\"ce-step dead-step\",\"Faded\"));}\n"
+    "    else if(cool){lad.setAttribute(\"aria-label\",\"Pulled back below the flag\");lad.appendChild(el(\"span\",\"ce-step cool-step\",\"Pulled back\"));}\n"
+    "    else{lad.setAttribute(\"aria-label\",\"Warning — under $15k market cap\");lad.appendChild(el(\"span\",\"ce-step floor-step\",\"⚠ Under $15k\"));}\n"
+    "  }else{\n"
+    "    var idx=(typeof s.ceStepIndex===\"number\")?s.ceStepIndex:0;\n"
+    "    lad.setAttribute(\"role\",\"img\");lad.setAttribute(\"aria-label\",\"Strength: \"+(CE_STEP_LABEL[s.ceStep]||s.ceStep)+\", step \"+(idx+1)+\" of 4\");\n"
+    "    [\"flagged\",\"heating\",\"strong\",\"confirmed\"].forEach(function(k,i){\n"
+    "      if(i>0)lad.appendChild(el(\"span\",\"ce-conn\"+(i<=idx?\" on\":\"\")));\n"
+    "      lad.appendChild(el(\"span\",\"ce-step\"+(i===idx?\" on\":\"\")+(i<idx?\" past\":\"\"),CE_STEP_LABEL[k]));\n"
+    "    });\n"
+    "  }\n"
+    "  box.appendChild(lad);\n"
+    "  if(s.ceLine)box.appendChild(el(\"div\",\"ce-line\",s.ceLine));\n"
+    "  var help=el(\"div\",\"ce-help\");help.hidden=true;help.id=\"ce-help\";help.setAttribute(\"role\",\"region\");help.setAttribute(\"aria-label\",\"How Clear Eyes works\");\n"
+    "  help.textContent=\"We watch every coin after it's flagged. As buyers and price back it, it climbs: Flagged → Heating up → Strong → Confirmed. If it dies, it shows Faded.\";\n"
+    "  box.appendChild(help);\n"
+    "  q.addEventListener(\"click\",function(){var h=help.hidden;help.hidden=!h;q.setAttribute(\"aria-expanded\",h?\"true\":\"false\");});\n"
+    "  return box;\n"
+    "}")
+
+
+def _fp_gated_look(free_ce):
+    return [("up?UP_HEX:DOWN_HEX,false);sp.setAttribute", _FP_CHART + ",false);sp.setAttribute", 1),   # (a) the card chart
+            ("up?UP_HEX:DOWN_HEX,true));", _FP_CHART + ",true));", 1),                                 # (b) the pop-up chart
+            (free_ce, _GATED_CE, 1)]                                                                  # (c) the Clear Eyes box
+
+
+_FP_GATED_LOOK = {"d_free": _fp_gated_look(_FREE_CE_D), "m_free": _fp_gated_look(_FREE_CE_M)}
 SUBS = {
-    ("d_free", 3): _SRV_STRENGTH_SUBS + _FREE_LEAD_SWAP + _NO_DATA_CHIPS,
+    ("d_free", 3): _FP_GATED_LOOK["d_free"] + _SRV_STRENGTH_SUBS + _FREE_LEAD_SWAP + _NO_DATA_CHIPS,
     ("d_gated", 4): _SRV_STRENGTH_SUBS + _CHIP_SUB + _NO_DATA_CHIPS,
-    ("m_free", 3): _SRV_STRENGTH_SUBS + _FREE_LEAD_SWAP + _NO_DATA_CHIPS,
+    ("m_free", 3): _FP_GATED_LOOK["m_free"] + _SRV_STRENGTH_SUBS + _FREE_LEAD_SWAP + _NO_DATA_CHIPS,
     ("m_gated", 2): _SRV_STRENGTH_SUBS + _CHIP_SUB + _NO_DATA_CHIPS,
 }
 

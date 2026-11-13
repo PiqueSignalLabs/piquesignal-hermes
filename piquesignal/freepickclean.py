@@ -1,11 +1,12 @@
 """The panel's SECOND lock for the keyless Hermes paths of the free-board service (Missed strip, Free Pick card,
-banners, images): EXACT copies of the free-feed service's cleaners (freefeed/freefeed.py, section "HERMES cleaners").
-test_hermes_live.py proves every function here has the same code as the server's (doc text
-aside) and gives identical output on hostile input. Edit BOTH or neither. Stdlib only.
+banners, images, and the free board's Featured Callers): EXACT copies of the free-feed service's cleaners
+(freefeed/freefeed.py, section "HERMES cleaners"). test_hermes_live.py proves every function here has the same code as
+the server's (doc text aside) and gives identical output on hostile input. Edit BOTH or neither. Stdlib only.
 The text / number / URL rules are rowclean.py's (itself the exact copy of the server's field cleaner).
 """
 import importlib.util
 import re
+import unicodedata
 from pathlib import Path
 
 
@@ -18,6 +19,7 @@ def _load_sibling(name):
 
 _rc = _load_sibling("rowclean")
 _num, _text, _URL_RE, _MINT_RE, SOCIAL_KEYS = _rc._num, _rc._text, _rc._URL_RE, _rc._MINT_RE, _rc.SOCIAL_KEYS
+_BAD_CHARS, _BAD_CATEGORIES = _rc._BAD_CHARS, _rc._BAD_CATEGORIES      # the label / Telegram-text cleaners use them
 
 IMG_PREFIX = "/api/free-board/img/"
 _LOGO_KEY_RE = re.compile(r"[0-9a-f]{16}\Z")
@@ -34,6 +36,26 @@ _BANNER_LINK_RE = re.compile(r"https://[^\s\"'<>\\`]+\Z")
 _SHA12_RE = re.compile(r"[0-9a-f]{12}\Z")
 PICK_STR_FIELDS = ("age", "tokenAge", "flagMc", "mcap", "liq", "holdersCount", "holders", "txns5m", "top10", "bundles",
                    "snipers", "vol5m", "vol1h", "vol24h")
+# The free pick also carries dexPaid / feeRug / feeRugFlicker / realCrowd, ceLine is kept WHOLE (at most
+# ONE " N sources on it." tail), ceStepIndex is 0..3 (the website makes 0..3 only).
+CE_INDEX_MAX = 3
+CROWD_TIERS = frozenset({"clean", "borderline", "padded"})
+CROWD_KEYS = frozenset({"real", "shown", "pct", "tier", "padded", "line"})    # = the website's realCrowd keys
+CROWD_SHOWN_MAX = 10 ** 12
+# Keyless Featured Callers on the free board (the member contract's body, rebuilt by the server's cleaner)
+FEATURED_CALLERS_MAX = 10
+FEATURED_CALLS_MAX = 20
+FEATURED_LABEL_MAX = 200
+FEATURED_SYMBOL_MAX = 64
+FEATURED_ESSENCE_MAX = 150
+FEATURED_BODY_MAX = 600
+_FEAT_URL_RE = re.compile(r"https?://\S+", re.IGNORECASE)   # the pull API's 2nd URL guard, here case-insensitive
+# link forms WITHOUT a scheme + script-like schemes, removed from essence / body too ("Text only: no links")
+_FEAT_LINK_RE = re.compile(r"(?i)\b(?:www\.|t\.me/|telegram\.(?:me|dog)/)\S+|\b(?:javascript|vbscript|data|tg):\S+")
+_WS_RE = re.compile(r"\s+")   # _no_src squashes every run of white space (also after NFKD folding)
+_FEAT_DATE_RE = re.compile(r"[A-Z][a-z]{2} [0-9]{1,2}\Z")
+_FEAT_TS_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:[+-][0-9]{2}:[0-9]{2}|Z)?\Z")
+_FEAT_MULT_RE = re.compile(r"[0-9]+(?:\.[0-9]+)?x\Z")
 
 
 # ----------------------------------------------------------------------------------------------- exact server copies
@@ -74,19 +96,54 @@ def clean_missed(items):
     return [c for c in (clean_missed_item(it) for it in items[:MISSED_MAX]) if c is not None]
 
 
+def _no_src(s):
+    """True when the text carries no source-count phrase ("source on it" / "sources on it", any case), checked on the
+    text as it is AND after NFKD folding with every run of white space squashed to one space (so no
+    look-alike letter, odd space or double space passes)."""
+    for low in (s.lower(), _WS_RE.sub(" ", unicodedata.normalize("NFKD", s)).lower()):
+        if "source on it" in low or "sources on it" in low:
+            return False
+    return True
+
+
 def _ce_line(v):
+    """The WHOLE Clear-Eyes line or None: at most 300 characters of clean text; at most ONE tail of
+    the exact board form (_CE_SOURCE_SUFFIX_RE, anchored at the end) and nothing source-like before it; never blank."""
     line = _text(v, 300)
     if line is None:
         return None
-    line = _CE_SOURCE_SUFFIX_RE.sub("", line)
-    if "source on it" in line or "sources on it" in line or not line:
+    m = _CE_SOURCE_SUFFIX_RE.search(line)
+    head = line[:m.start()] if m else line
+    if not head.strip() or not _no_src(head):
         return None
     return line
 
 
+def _pick_crowd(v):
+    """The website's realCrowd {real, shown, pct, tier, padded, line?}, ALL or NOTHING: real / shown / pct strict ints
+    (never bool / float), 0 <= real <= shown, 1 <= shown <= 10^12, 0 <= pct <= 100, tier in CROWD_TIERS, padded a bool,
+    no other key. line is optional: kept only as clean text <= 300 with no source phrase (else only the line is left
+    out). padded is NOT checked against tier (the website's env limits decide that)."""
+    if not isinstance(v, dict) or not set(v) <= CROWD_KEYS:
+        return None
+    real, shown, pct, tier, padded = v.get("real"), v.get("shown"), v.get("pct"), v.get("tier"), v.get("padded")
+    if not (_int_only(real) and _int_only(shown) and _int_only(pct)):
+        return None
+    if not (1 <= shown <= CROWD_SHOWN_MAX and 0 <= real <= shown and 0 <= pct <= 100):
+        return None
+    if not isinstance(tier, str) or tier not in CROWD_TIERS or not isinstance(padded, bool):
+        return None
+    out = {"real": real, "shown": shown, "pct": pct, "tier": tier, "padded": padded}
+    line = _text(v.get("line"), 300)
+    if line is not None and _no_src(line):
+        out["line"] = line
+    return out
+
+
 def clean_pick_card(card):
-    """The free-pick card allowlist (the website's free-pick card minus dexPaid / realCrowd). A bad mint / sym /
-    chain => None (the whole pick is null); any other bad value => that key is omitted. spark is always []."""
+    """The free-pick card allowlist (the website's free-pick card, with dexPaid, feeRug / feeRugFlicker
+    (only True; red feeRug wins), realCrowd (all or nothing); the whole ceLine). A bad mint / sym / chain => None (the
+    whole pick is null); any other bad value => that key is omitted. spark is always []."""
     if not isinstance(card, dict):
         return None
     mint, sym = card.get("mint"), _text(card.get("sym"), 65)
@@ -123,11 +180,20 @@ def clean_pick_card(card):
     if isinstance(step, str) and step in CE_STEPS:
         out["ceStep"] = step
     idx = card.get("ceStepIndex")
-    if _int_only(idx) and 0 <= idx <= 10:
+    if _int_only(idx) and 0 <= idx <= CE_INDEX_MAX:
         out["ceStepIndex"] = idx
     line = _ce_line(card.get("ceLine"))
     if line is not None:
         out["ceLine"] = line
+    if isinstance(card.get("dexPaid"), bool):
+        out["dexPaid"] = card["dexPaid"]
+    if card.get("feeRug") is True:
+        out["feeRug"] = True
+    elif card.get("feeRugFlicker") is True:
+        out["feeRugFlicker"] = True
+    crowd = _pick_crowd(card.get("realCrowd"))
+    if crowd is not None:
+        out["realCrowd"] = crowd
     return out
 
 
@@ -164,6 +230,67 @@ def clean_banners(items):
     if not isinstance(items, list):
         return []
     return [c for c in (clean_banner(it) for it in items[:BANNERS_MAX]) if c is not None]
+
+
+def _feat_label(v, cap=FEATURED_LABEL_MAX):
+    """A caller label, CLEANED (never a reason to drop the caller by itself): not a str -> ""; every control / format /
+    private-use / line-break character, filler and < > ` removed; trimmed; cut to cap; a source phrase or a
+    URL left in it => "" (an empty key / name then drops the caller)."""
+    if not isinstance(v, str):
+        return ""
+    v = v[:cap * 4]
+    out = "".join(ch for ch in v if not (ch in _BAD_CHARS or unicodedata.category(ch) in _BAD_CATEGORIES))
+    out = out.strip()[:cap]
+    return out if _no_src(out) and not _FEAT_URL_RE.search(out) else ""
+
+
+def _feat_long_text(v, cap):
+    """Telegram text (essence / body): line breaks kept, every other bad character removed FIRST, then every URL removed
+    (any case), then every scheme-less link (_FEAT_LINK_RE), trimmed, cut to cap; a source phrase (checked on
+    the FINAL text) => "". Else ""."""
+    if not isinstance(v, str):
+        return ""
+    v = v[:cap * 4].replace("\r\n", "\n")
+    out = "".join(ch for ch in v if ch == "\n" or not (ch in _BAD_CHARS or unicodedata.category(ch) in _BAD_CATEGORIES))
+    out = _FEAT_LINK_RE.sub("", _FEAT_URL_RE.sub("", out)).strip()[:cap]
+    return out if _no_src(out) else ""
+
+
+def clean_featured(fe):
+    """doc["featured"] -> {"count", "callers": [<= 10 x {key, name, handle, tagline, count, calls: [<= 20 x {symbol,
+    mint, date?, ts?, essence, body, mult?}]}]} or None (missing / corrupt => /featured answers 503). The member contract
+    (the server's order kept, newest first); recaps / channel / any other key never pass. A caller is dropped when
+    its key or name is empty after cleaning; a call when its mint is not base58 32-44 or its symbol is not clean text
+    <= 64 with no source phrase and no URL."""
+    if not isinstance(fe, dict) or not isinstance(fe.get("callers"), list):
+        return None
+    callers = []
+    for c in fe["callers"][:FEATURED_CALLERS_MAX]:
+        if not isinstance(c, dict) or not isinstance(c.get("calls"), list):
+            continue
+        key, name = _feat_label(c.get("key")), _feat_label(c.get("name"))
+        if not key or not name:
+            continue
+        calls = []
+        for x in c["calls"][:FEATURED_CALLS_MAX]:
+            if not isinstance(x, dict):
+                continue
+            mint, sym = x.get("mint"), _text(x.get("symbol"), FEATURED_SYMBOL_MAX)
+            if not (isinstance(mint, str) and _MINT_RE.fullmatch(mint)) or sym is None or not _no_src(sym) \
+                    or _FEAT_URL_RE.search(sym):
+                continue
+            call = {"symbol": sym, "mint": mint}
+            for k, rx in (("date", _FEAT_DATE_RE), ("ts", _FEAT_TS_RE)):
+                if isinstance(x.get(k), str) and rx.fullmatch(x[k]):
+                    call[k] = x[k]
+            call["essence"] = _feat_long_text(x.get("essence"), FEATURED_ESSENCE_MAX)
+            call["body"] = _feat_long_text(x.get("body"), FEATURED_BODY_MAX)
+            if isinstance(x.get("mult"), str) and _FEAT_MULT_RE.fullmatch(x["mult"]):
+                call["mult"] = x["mult"]
+            calls.append(call)
+        callers.append({"key": key, "name": name, "handle": _feat_label(c.get("handle")),
+                        "tagline": _feat_label(c.get("tagline")), "count": len(calls), "calls": calls})
+    return {"count": len(callers), "callers": callers}
 
 
 def img_ok(key, ctype, data):

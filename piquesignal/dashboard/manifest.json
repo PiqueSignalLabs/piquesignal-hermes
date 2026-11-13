@@ -3,7 +3,7 @@
   "label": "Pique Signal",
   "description": "Backend for the Pique Signal Desktop panel: fetches the Pique Signal board for the pane.",
   "icon": "Puzzle",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "tab": {
     "path": "/piquesignal",
     "hidden": true
